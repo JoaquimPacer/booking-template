@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# booking-template
 
-## Getting Started
+Reusable Next.js + Sanity + Postgres + Prisma booking template. Fork into a per-client repo, customize content in Sanity, deploy to Vercel.
 
-First, run the development server:
+## Read first if you're a fresh-context AI
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the high-level overview + Mermaid diagrams.
+2. [docs/decisions/0001-stack-choice.md](./docs/decisions/0001-stack-choice.md) (and the rest of `docs/decisions/`) for why the stack is what it is.
+3. The companion docs repo: `github.com/JoaquimPacer/booking-flow-pitches`. Especially:
+   - `templates/BOOKING_TEMPLATE_V1_SPEC.md` for the v1 scope.
+   - `templates/BOOKING_TEMPLATE_LONG_TERM_VISION.md` for the full Acuity-clone target.
+   - Latest `session-summaries/<YYYY-MM-DD>.md` for the most recent direction.
+
+## Stack
+
+Next.js 16 (App Router) + TypeScript + Tailwind + Prisma + Neon (Postgres) + Sanity (hosted, embedded Studio at `/studio`) + NextAuth.js + Stripe + Resend + Twilio + Google Calendar API. Hosted on Vercel.
+
+## Local dev
+
+```sh
+cp .env.example .env.local        # then fill in values
+npx prisma generate               # generate the Prisma client
+npx prisma migrate dev            # apply schema to your local Neon branch
+npm run dev                       # http://localhost:3000
+                                  # Studio at http://localhost:3000/studio
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Per-client onboarding
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See [docs/ONBOARD_NEW_CLIENT.md](./docs/ONBOARD_NEW_CLIENT.md). High-level: GitHub "Use this template" -> new repo -> new Neon project -> new Sanity project -> wire env vars in Vercel -> push.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Updating content (for clients / non-devs)
 
-## Learn More
+See [docs/UPDATING_CONTENT.md](./docs/UPDATING_CONTENT.md). Marketing content (text, photos, services, FAQ) lives in Sanity Studio at `/studio`. No Git involved. Booking config (prices, schedules, refunds) lives in the admin UI at `/admin`.
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Push to GitHub, Vercel auto-deploys. `main` branch = production. Every other branch = preview URL (staging). Env vars are set per environment in Vercel project settings.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT during development. Source-available license (BSL-style) when commercialized; clients own data + use code, can't resell. See companion `booking-flow-pitches/clients/native-texan-two-step/license-source-available.md` for the model.

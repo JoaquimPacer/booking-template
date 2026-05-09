@@ -1,0 +1,165 @@
+// booking-template v1 Prisma schema (canonical, this is the live schema)
+//
+// SCOPE: single-instructor service businesses (massage, hairdresser, tutor, solo trainer).
+// First customer: massage therapist, late June 2026.
+//
+// NOT in v1: multi-instructor classes, lead/follow role balancing, Stripe Connect splits,
+// waitlist promotion logic. Those models live in the companion docs repo at
+// `booking-flow-pitches/templates/v2-future/schema-full.prisma` and ship via additive
+// migrations when a dance / group-class client lands.
+//
+// See `docs/decisions/0001-stack-choice.md` and the V1 spec at
+// `github.com/JoaquimPacer/booking-flow-pitches/blob/main/templates/BOOKING_TEMPLATE_V1_SPEC.md`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Studio {
+  // Effectively a singleton per deploy in v1 (one row per client business).
+  // Multi-tenant runtime can come later; for now each client gets their own deploy + DB.
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("America/Chicago") // IANA tz, e.g. "America/Chicago"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                  User[]
+  services               Service[]
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+  bookings               Booking[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(CLIENT)
+  studioId  String
+  studio    Studio   @relation(fields: [studioId], references: [id])
+  createdAt DateTime @default(now())
+
+  // Instructor fields (used when role = INSTRUCTOR or ADMIN)
+  bio                String?
+  googleRefreshToken String?
+  googleCalendarId   String?
+
+  // Client fields (used when role = CLIENT)
+  phone String?
+
+  // NextAuth credentials provider hashed password (admin/instructor login)
+  hashedPassword String?
+
+  bookingsAsAttendee BookingAttendee[]
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  CLIENT
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  studioId        String
+  sanityId        String?  // links to Sanity service doc for marketing copy
+  title           String   // "60 min Deep Tissue Massage"
+  durationMinutes Int
+  priceCents      Int
+  bufferMinutes   Int      @default(0) // pad before/after to clean up, etc.
+  isActive        Boolean  @default(true)
+  studio          Studio   @relation(fields: [studioId], references: [id])
+  bookings        Booking[]
+
+  @@index([studioId, isActive])
+}
+
+model AvailabilityRule {
+  // Recurring weekly availability (e.g. Mon-Fri 9-5).
+  id        String @id @default(cuid())
+  studioId  String
+  dayOfWeek Int    // 0 = Sunday, 6 = Saturday
+  startTime String // "09:00" in studio's local time
+  endTime   String // "17:00" in studio's local time
+  studio    Studio @relation(fields: [studioId], references: [id])
+
+  @@index([studioId, dayOfWeek])
+}
+
+model AvailabilityException {
+  // One-off overrides: holidays, vacation days, special hours.
+  id        String   @id @default(cuid())
+  studioId  String
+  date      DateTime // date only (use start of day UTC)
+  isOpen    Boolean  // false = closed for the day; true = special hours below
+  startTime String?  // only set if isOpen = true
+  endTime   String?
+  reason    String?  // optional, e.g. "Thanksgiving" or "Out of town"
+  studio    Studio   @relation(fields: [studioId], references: [id])
+
+  @@unique([studioId, date])
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  studioId           String
+  serviceId          String
+  startTime          DateTime      // UTC always
+  endTime            DateTime      // UTC always
+  status             BookingStatus @default(PENDING)
+  cancellationReason String?
+  formResponses      Json?         // intake form data, schema in app
+  googleEventId      String?       // Google Calendar event id once created
+  studio             Studio        @relation(fields: [studioId], references: [id])
+  service            Service       @relation(fields: [serviceId], references: [id])
+  attendee           BookingAttendee?
+  payment            Payment?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([studioId, startTime])
+  @@index([status])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model BookingAttendee {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id])
+  name      String
+  email     String
+  phone     String?
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  bookingId             String        @unique
+  booking               Booking       @relation(fields: [bookingId], references: [id])
+  stripePaymentIntentId String
+  totalCents            Int
+  status                PaymentStatus
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
