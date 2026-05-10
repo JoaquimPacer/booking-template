@@ -36,7 +36,7 @@ graph LR
     NextApp --> Resend
     NextApp --> Twilio
     NextApp --> GCal
-    NextApp -.v1.5.-> GPlaces
+    NextApp -. "v1.5 only" .-> GPlaces
     Studio --> SanityCloud
 ```
 
