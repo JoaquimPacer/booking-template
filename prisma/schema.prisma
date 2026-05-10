@@ -16,8 +16,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection, used by Prisma client at runtime
+  directUrl = env("DIRECT_URL") // direct connection, used by `prisma migrate` only
 }
 
 model Studio {
@@ -67,15 +68,15 @@ enum Role {
 }
 
 model Service {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   studioId        String
-  sanityId        String?  // links to Sanity service doc for marketing copy
-  title           String   // "60 min Deep Tissue Massage"
+  sanityId        String? // links to Sanity service doc for marketing copy
+  title           String // "60 min Deep Tissue Massage"
   durationMinutes Int
   priceCents      Int
-  bufferMinutes   Int      @default(0) // pad before/after to clean up, etc.
-  isActive        Boolean  @default(true)
-  studio          Studio   @relation(fields: [studioId], references: [id])
+  bufferMinutes   Int       @default(0) // pad before/after to clean up, etc.
+  isActive        Boolean   @default(true)
+  studio          Studio    @relation(fields: [studioId], references: [id])
   bookings        Booking[]
 
   @@index([studioId, isActive])
@@ -85,7 +86,7 @@ model AvailabilityRule {
   // Recurring weekly availability (e.g. Mon-Fri 9-5).
   id        String @id @default(cuid())
   studioId  String
-  dayOfWeek Int    // 0 = Sunday, 6 = Saturday
+  dayOfWeek Int // 0 = Sunday, 6 = Saturday
   startTime String // "09:00" in studio's local time
   endTime   String // "17:00" in studio's local time
   studio    Studio @relation(fields: [studioId], references: [id])
@@ -98,31 +99,31 @@ model AvailabilityException {
   id        String   @id @default(cuid())
   studioId  String
   date      DateTime // date only (use start of day UTC)
-  isOpen    Boolean  // false = closed for the day; true = special hours below
-  startTime String?  // only set if isOpen = true
+  isOpen    Boolean // false = closed for the day; true = special hours below
+  startTime String? // only set if isOpen = true
   endTime   String?
-  reason    String?  // optional, e.g. "Thanksgiving" or "Out of town"
+  reason    String? // optional, e.g. "Thanksgiving" or "Out of town"
   studio    Studio   @relation(fields: [studioId], references: [id])
 
   @@unique([studioId, date])
 }
 
 model Booking {
-  id                 String        @id @default(cuid())
+  id                 String           @id @default(cuid())
   studioId           String
   serviceId          String
-  startTime          DateTime      // UTC always
-  endTime            DateTime      // UTC always
-  status             BookingStatus @default(PENDING)
+  startTime          DateTime // UTC always
+  endTime            DateTime // UTC always
+  status             BookingStatus    @default(PENDING)
   cancellationReason String?
-  formResponses      Json?         // intake form data, schema in app
-  googleEventId      String?       // Google Calendar event id once created
-  studio             Studio        @relation(fields: [studioId], references: [id])
-  service            Service       @relation(fields: [serviceId], references: [id])
+  formResponses      Json? // intake form data, schema in app
+  googleEventId      String? // Google Calendar event id once created
+  studio             Studio           @relation(fields: [studioId], references: [id])
+  service            Service          @relation(fields: [serviceId], references: [id])
   attendee           BookingAttendee?
   payment            Payment?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([studioId, startTime])
   @@index([status])

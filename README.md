@@ -18,7 +18,7 @@ Next.js 16 (App Router) + TypeScript + Tailwind + Prisma + Neon (Postgres) + San
 ## Local dev
 
 ```sh
-cp .env.example .env.local        # then fill in values
+cp .env.example .env              # then fill in values (use .env, NOT .env.local; Prisma's CLI reads .env)
 npx prisma generate               # generate the Prisma client
 npx prisma migrate dev            # apply schema to your local Neon branch
 npm run dev                       # http://localhost:3000
