@@ -4,14 +4,16 @@ Living view of the booking-template build phases. For the full spec see the comp
 
 ## Phase calendar
 
+**Note (2026-05-11):** Phase 1.5 was moved earlier in the order (used to be parallel with Phase 3) so Joaquim can begin the multi-business cold-call pitch funnel as soon as Phase 1 ships. NXTS WordPress sprint became uncertain, so Phase 1 started early.
+
 | Phase | Dates | Status | Deliverable |
 | --- | --- | --- | --- |
-| **0** | May 9-15 | **Done (May 11)** | Empty scaffold deployed at `booking-template.vercel.app`; Neon + Sanity wired; Prisma schema migrated to staging + main |
-| **1** | May 16-30 | Up next | Sanity content models (`siteSettings`, `page`, `service`, `instructor`, `faq`, `testimonial`, `navItem`, `cta`, `seo`); marketing pages bound to Sanity content (`/`, `/services`, `/about`, `/faq`, `/contact`); Lighthouse > 90 mobile + desktop; SEO baseline (schema.org JSON-LD, sitemap.xml, robots.txt, OG tags); shadcn/ui components for hero, service card, FAQ accordion, contact form |
-| **2** | May 30-June 13 | Pending | Booking core: service browse, time-slot picker (uses `AvailabilityRule` + Google Calendar busy times), Stripe Checkout, webhook driving booking confirmation, Resend email with .ics, Twilio SMS, cancel/reschedule by client via signed URL |
-| **3** | June 13-27 | Pending | Admin UI (`/admin`, NextAuth-gated): bookings list, refund button, edit availability, edit services. Error states, loading skeletons, 404/500 pages. SEO polish. `scripts/lighthouse-all.ps1` batch script (run Lighthouse against home + each marketing page on mobile + desktop, output HTML reports for pitch comparisons). Sanity Studio walkthrough screencap. |
-| **1.5** | parallel with Phase 3 | Pending | `scripts/replicate-prospect.ts`: given a Google Place ID, pull business name, address, hours, reviews, photos via Places API, seed a fresh Sanity dataset, spin up a Vercel preview URL. Used in the cold-call pitch motion (find 4.5★ business, build near-replica, send URL). |
-| **4** | last week of June | Pending | Public demo at fake-business URL (e.g. `lonestar-massage-demo.vercel.app`); 90-second screencap of booking flow; Sanity Studio walkthrough video for client onboarding. Pitch the massage therapist. |
+| **0** | May 9-11 | **Done** | Empty scaffold deployed at `booking-template.vercel.app`; Neon + Sanity wired; Prisma schema migrated to staging + main |
+| **1** | May 11-22 | In progress | Sanity content models (`siteSettings` with brand theme tokens, `page`, `service`, `instructor`, `faq`, `testimonial`, `navItem`, `cta`, `seo`); marketing pages bound to Sanity content (`/`, `/services`, `/services/[slug]`, `/about`, `/faq`, `/contact`); Lighthouse > 90 mobile + desktop; SEO baseline (schema.org JSON-LD, sitemap.xml, robots.txt, OG tags); shadcn/ui hero (full-width overlay), service card (text-only, no photo), FAQ accordion; Vercel Analytics on; Lonestar Massage Demo seeded |
+| **1.5** | May 22-29 | Pending (pulled forward) | `scripts/replicate-prospect.ts`: given a Google Place ID, pull business name, address, hours, reviews, photos via Places API, seed a fresh Sanity dataset, spin up a Vercel preview URL. Used in the cold-call pitch motion (find 4.5★ business, build near-replica, send URL). Multi-business pitch funnel runs in parallel from this point on (5-8 prospects per push, archive after 3-4 weeks if no bite). |
+| **2** | May 29-June 12 | Pending | Booking core: service browse, list + calendar toggle for time-slot picker, Stripe Checkout, webhook driving booking confirmation, Resend email with .ics, Twilio SMS, cancel/reschedule by client via signed URL. Until this ships, "Book now" buttons link to either `mailto:` or a Sanity-configured external scheduler URL per client. |
+| **3** | June 12-26 | Pending | Admin UI (`/admin`, NextAuth-gated): bookings list, refund button, edit availability, edit services. Error states, loading skeletons, 404/500 pages. SEO polish. `scripts/lighthouse-all.ps1` batch script (run Lighthouse against home + each marketing page on mobile + desktop, output HTML reports for pitch comparisons). Sanity Studio walkthrough screencap. |
+| **4** | last week of June | Pending | Public demo at fake-business URL (e.g. `lonestar-massage-demo.vercel.app`); 90-second screencap of booking flow; Sanity Studio walkthrough video for client onboarding. Pitch Theresa + 4-7 other prospects from the Phase 1.5 funnel. |
 
 ## What "done" means for each phase
 
