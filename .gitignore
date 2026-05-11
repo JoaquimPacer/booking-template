@@ -44,3 +44,6 @@ next-env.d.ts
 # editor-specific (Obsidian, JetBrains, etc.)
 .obsidian/
 .idea/
+
+.vercel
+.env*.local
