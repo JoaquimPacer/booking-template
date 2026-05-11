@@ -1,0 +1,193 @@
+// GROQ (Sanity's query language) helpers for fetching content.
+// Cached via Next.js ISR (revalidate per page); see usage in src/app/.
+
+import { groq } from "next-sanity";
+import { sanity } from "./sanity";
+
+// ============================================================================
+// TYPES (kept loose for now; tighten per-use as content stabilizes)
+// ============================================================================
+
+export type SiteSettings = {
+  name: string;
+  tagline?: string;
+  description?: string;
+  brand?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    foregroundColor?: string;
+    headingFont?: string;
+    bodyFont?: string;
+    logo?: SanityImage;
+    logoDark?: SanityImage;
+    favicon?: SanityImage;
+  };
+  contact?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+    hours?: string;
+    googleMapsUrl?: string;
+    googlePlaceId?: string;
+  };
+  social?: {
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+    youtube?: string;
+  };
+  footerText?: string;
+  defaultSeo?: SeoFields;
+};
+
+export type SeoFields = {
+  metaTitle?: string;
+  metaDescription?: string;
+  ogImage?: SanityImage;
+};
+
+export type SanityImage = {
+  _type: "image";
+  asset: { _ref: string; _type: "reference" };
+};
+
+export type NavItem = {
+  _id: string;
+  label: string;
+  href: string;
+  location: "header" | "footer" | "both";
+  order: number;
+};
+
+export type Service = {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  tagline?: string;
+  description?: string;
+  body?: unknown;
+  heroImage?: SanityImage;
+  gallery?: SanityImage[];
+  whatToExpect?: unknown;
+  order?: number;
+  isActive?: boolean;
+  seo?: SeoFields;
+};
+
+export type Instructor = {
+  _id: string;
+  name: string;
+  title?: string;
+  slug?: { current: string };
+  photo?: SanityImage;
+  bio?: unknown;
+  specialties?: string[];
+  yearsExperience?: number;
+};
+
+export type Faq = {
+  _id: string;
+  question: string;
+  answer: unknown;
+  category?: string;
+  order?: number;
+};
+
+export type Testimonial = {
+  _id: string;
+  quote: string;
+  author: string;
+  authorTitle?: string;
+  photo?: SanityImage;
+  rating?: number;
+  source?: string;
+  featured?: boolean;
+};
+
+export type Page = {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  body?: unknown;
+  seo?: SeoFields;
+};
+
+// ============================================================================
+// QUERIES
+// ============================================================================
+
+export async function getSiteSettings(): Promise<SiteSettings | null> {
+  return sanity.fetch<SiteSettings | null>(
+    groq`*[_type == "siteSettings"][0]`,
+    {},
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getNavItems(
+  location: "header" | "footer" = "header",
+): Promise<NavItem[]> {
+  return sanity.fetch<NavItem[]>(
+    groq`*[_type == "navItem" && (location == $location || location == "both")] | order(order asc) { _id, label, href, location, order }`,
+    { location },
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getAllServices(): Promise<Service[]> {
+  return sanity.fetch<Service[]>(
+    groq`*[_type == "service" && isActive != false] | order(order asc) { _id, title, slug, tagline, description, heroImage, order, isActive }`,
+    {},
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getServiceBySlug(slug: string): Promise<Service | null> {
+  return sanity.fetch<Service | null>(
+    groq`*[_type == "service" && slug.current == $slug][0]`,
+    { slug },
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getAllInstructors(): Promise<Instructor[]> {
+  return sanity.fetch<Instructor[]>(
+    groq`*[_type == "instructor"] | order(name asc) { _id, name, title, slug, photo, bio, specialties, yearsExperience }`,
+    {},
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getAllFaqs(): Promise<Faq[]> {
+  return sanity.fetch<Faq[]>(
+    groq`*[_type == "faq"] | order(category asc, order asc) { _id, question, answer, category, order }`,
+    {},
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getFeaturedTestimonials(): Promise<Testimonial[]> {
+  return sanity.fetch<Testimonial[]>(
+    groq`*[_type == "testimonial" && featured == true] | order(_createdAt desc) { _id, quote, author, authorTitle, photo, rating, source, featured }`,
+    {},
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getAllTestimonials(): Promise<Testimonial[]> {
+  return sanity.fetch<Testimonial[]>(
+    groq`*[_type == "testimonial"] | order(_createdAt desc) { _id, quote, author, authorTitle, photo, rating, source, featured }`,
+    {},
+    { next: { revalidate: 60 } },
+  );
+}
+
+export async function getPageBySlug(slug: string): Promise<Page | null> {
+  return sanity.fetch<Page | null>(
+    groq`*[_type == "page" && slug.current == $slug][0]`,
+    { slug },
+    { next: { revalidate: 60 } },
+  );
+}
