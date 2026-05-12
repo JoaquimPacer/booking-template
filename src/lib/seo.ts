@@ -13,11 +13,18 @@ import { urlFor } from "@/lib/sanity-image";
 
 /**
  * Resolves the canonical site URL.
- * Priority: explicit NEXT_PUBLIC_SITE_URL env var > Vercel-provided URL > localhost fallback.
+ * Priority:
+ *   1. NEXT_PUBLIC_SITE_URL (explicit; set this when using a custom domain)
+ *   2. VERCEL_PROJECT_PRODUCTION_URL (Vercel's stable production alias, e.g. booking-template.vercel.app)
+ *   3. NEXT_PUBLIC_VERCEL_URL / VERCEL_URL (per-deployment URLs; fallback only)
+ *   4. localhost (dev fallback)
  */
 export function getSiteUrl(): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   }
   if (process.env.NEXT_PUBLIC_VERCEL_URL) {
     return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
