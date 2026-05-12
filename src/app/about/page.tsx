@@ -98,16 +98,20 @@ export default async function AboutPage() {
                       <PortableText value={instructor.bio as PortableTextBlock[]} />
                     </div>
                   )}
-                  {instructor.specialties && instructor.specialties.length > 0 && (
+                  {instructor.specialties && (
                     <div className="flex flex-wrap gap-2">
-                      {instructor.specialties.map((s) => (
-                        <span
-                          key={s}
-                          className="rounded-full bg-muted px-3 py-1 text-xs"
-                        >
-                          {s}
-                        </span>
-                      ))}
+                      {instructor.specialties
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((s) => (
+                          <span
+                            key={s}
+                            className="rounded-full bg-muted px-3 py-1 text-xs"
+                          >
+                            {s}
+                          </span>
+                        ))}
                     </div>
                   )}
                 </div>

@@ -40,9 +40,8 @@ export const instructor = defineType({
     defineField({
       name: "specialties",
       title: "Specialties",
-      type: "array",
-      of: [{ type: "string" }],
-      description: "Short tags shown as pills.",
+      type: "string",
+      description: "Comma-separated list shown as pills. e.g. 'Deep tissue, Sports recovery, Chronic tension'",
     }),
     defineField({
       name: "yearsExperience",

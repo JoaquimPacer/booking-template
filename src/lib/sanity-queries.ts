@@ -91,7 +91,7 @@ export type Instructor = {
   slug?: { current: string };
   photo?: SanityImage;
   bio?: unknown;
-  specialties?: string[];
+  specialties?: string;
   yearsExperience?: number;
 };
 
