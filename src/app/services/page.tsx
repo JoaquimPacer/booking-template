@@ -1,17 +1,33 @@
+import { JsonLd } from "@/components/json-ld";
 import { ServiceCard } from "@/components/service-card";
-import { getAllServices } from "@/lib/sanity-queries";
+import { getAllServices, getSiteSettings } from "@/lib/sanity-queries";
+import { buildBreadcrumbListJsonLd, buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Services",
-};
+export async function generateMetadata() {
+  const siteSettings = await getSiteSettings();
+  return buildPageMetadata({
+    path: "/services",
+    siteSettings,
+    fallback: {
+      title: "Services",
+      description: `Browse all services offered by ${siteSettings?.name ?? "us"}.`,
+    },
+  });
+}
 
 export default async function ServicesPage() {
   const services = await getAllServices();
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
+      <JsonLd
+        data={buildBreadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Services", path: "/services" },
+        ])}
+      />
       <div className="mx-auto max-w-2xl text-center">
         <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
           Services

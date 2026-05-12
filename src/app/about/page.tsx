@@ -1,17 +1,32 @@
 import Image from "next/image";
 import { PortableText, type PortableTextBlock } from "@portabletext/react";
+import { JsonLd } from "@/components/json-ld";
 import { urlFor } from "@/lib/sanity-image";
 import {
   getAllInstructors,
   getPageBySlug,
   getSiteSettings,
 } from "@/lib/sanity-queries";
+import {
+  buildBreadcrumbListJsonLd,
+  buildPageMetadata,
+  buildPersonJsonLd,
+} from "@/lib/seo";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "About",
-};
+export async function generateMetadata() {
+  const [aboutPage, siteSettings] = await Promise.all([
+    getPageBySlug("about"),
+    getSiteSettings(),
+  ]);
+  return buildPageMetadata({
+    seo: aboutPage?.seo,
+    fallback: { title: aboutPage?.title ?? "About" },
+    path: "/about",
+    siteSettings,
+  });
+}
 
 export default async function AboutPage() {
   const [aboutPage, instructors, siteSettings] = await Promise.all([
@@ -25,6 +40,16 @@ export default async function AboutPage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-16 md:py-24">
+      <JsonLd
+        data={buildBreadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: "About", path: "/about" },
+        ])}
+      />
+      {instructors.map((instructor) => (
+        <JsonLd key={instructor._id} data={buildPersonJsonLd(instructor)} />
+      ))}
+
       <header>
         <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
           {aboutPage?.title ?? "About"}

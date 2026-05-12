@@ -5,13 +5,27 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { getAllFaqs } from "@/lib/sanity-queries";
+import { JsonLd } from "@/components/json-ld";
+import { getAllFaqs, getSiteSettings } from "@/lib/sanity-queries";
+import {
+  buildBreadcrumbListJsonLd,
+  buildFaqPageJsonLd,
+  buildPageMetadata,
+} from "@/lib/seo";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "FAQ",
-};
+export async function generateMetadata() {
+  const siteSettings = await getSiteSettings();
+  return buildPageMetadata({
+    fallback: {
+      title: "FAQ",
+      description: `Answers to frequently asked questions about ${siteSettings?.name ?? "our services"}.`,
+    },
+    path: "/faq",
+    siteSettings,
+  });
+}
 
 export default async function FaqPage() {
   const faqs = await getAllFaqs();
@@ -28,6 +42,13 @@ export default async function FaqPage() {
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-16 md:py-24">
+      <JsonLd data={buildFaqPageJsonLd(faqs)} />
+      <JsonLd
+        data={buildBreadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: "FAQ", path: "/faq" },
+        ])}
+      />
       <header>
         <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
           Frequently asked questions

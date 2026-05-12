@@ -1,13 +1,27 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone, Clock } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { JsonLd } from "@/components/json-ld";
 import { getSiteSettings } from "@/lib/sanity-queries";
+import {
+  buildBreadcrumbListJsonLd,
+  buildLocalBusinessJsonLd,
+  buildPageMetadata,
+} from "@/lib/seo";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Contact",
-};
+export async function generateMetadata() {
+  const siteSettings = await getSiteSettings();
+  return buildPageMetadata({
+    fallback: {
+      title: "Contact",
+      description: `Contact ${siteSettings?.name ?? "us"} by phone, email, or visit us in person.`,
+    },
+    path: "/contact",
+    siteSettings,
+  });
+}
 
 export default async function ContactPage() {
   const siteSettings = await getSiteSettings();
@@ -15,6 +29,13 @@ export default async function ContactPage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-16 md:py-24">
+      <JsonLd data={buildLocalBusinessJsonLd(siteSettings)} />
+      <JsonLd
+        data={buildBreadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Contact", path: "/contact" },
+        ])}
+      />
       <header>
         <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
           Get in touch

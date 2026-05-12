@@ -3,11 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PortableText, type PortableTextBlock } from "@portabletext/react";
 import { buttonVariants } from "@/components/ui/button";
+import { JsonLd } from "@/components/json-ld";
 import { urlFor } from "@/lib/sanity-image";
 import {
   getAllServices,
   getServiceBySlug,
+  getSiteSettings,
 } from "@/lib/sanity-queries";
+import {
+  buildBreadcrumbListJsonLd,
+  buildPageMetadata,
+  buildServiceJsonLd,
+} from "@/lib/seo";
 
 export const revalidate = 60;
 
@@ -22,17 +29,25 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: ServicePageProps) {
   const { slug } = await params;
-  const service = await getServiceBySlug(slug);
+  const [service, siteSettings] = await Promise.all([
+    getServiceBySlug(slug),
+    getSiteSettings(),
+  ]);
   if (!service) return {};
-  return {
-    title: service.seo?.metaTitle ?? service.title,
-    description: service.seo?.metaDescription ?? service.description,
-  };
+  return buildPageMetadata({
+    seo: service.seo,
+    fallback: { title: service.title, description: service.description },
+    path: `/services/${slug}`,
+    siteSettings,
+  });
 }
 
 export default async function ServiceDetailPage({ params }: ServicePageProps) {
   const { slug } = await params;
-  const service = await getServiceBySlug(slug);
+  const [service, siteSettings] = await Promise.all([
+    getServiceBySlug(slug),
+    getSiteSettings(),
+  ]);
   if (!service) notFound();
 
   const heroUrl = service.heroImage
@@ -41,6 +56,14 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
 
   return (
     <article className="pb-20">
+      <JsonLd data={buildServiceJsonLd(service, siteSettings)} />
+      <JsonLd
+        data={buildBreadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Services", path: "/services" },
+          { name: service.title, path: `/services/${service.slug.current}` },
+        ])}
+      />
       {heroUrl && (
         <div className="relative h-[40vh] min-h-[300px] w-full overflow-hidden">
           <Image

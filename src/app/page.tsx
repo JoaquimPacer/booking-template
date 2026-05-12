@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Hero } from "@/components/hero";
+import { JsonLd } from "@/components/json-ld";
 import { ServiceCard } from "@/components/service-card";
 import { TestimonialCard } from "@/components/testimonial-card";
 import {
@@ -8,8 +9,21 @@ import {
   getFeaturedTestimonials,
   getSiteSettings,
 } from "@/lib/sanity-queries";
+import { buildLocalBusinessJsonLd, buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
+
+export async function generateMetadata() {
+  const siteSettings = await getSiteSettings();
+  return buildPageMetadata({
+    path: "/",
+    siteSettings,
+    fallback: {
+      title: siteSettings?.name,
+      description: siteSettings?.tagline,
+    },
+  });
+}
 
 export default async function HomePage() {
   const [siteSettings, services, testimonials] = await Promise.all([
@@ -26,6 +40,8 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={buildLocalBusinessJsonLd(siteSettings)} />
+
       <Hero
         title={heroTitle}
         subtitle={heroSubtitle}

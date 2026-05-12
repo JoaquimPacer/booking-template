@@ -28,6 +28,12 @@ export async function SiteHeader() {
   const siteName = siteSettings?.name ?? "Booking Template";
   const headerCtaLabel = siteSettings?.headerCta?.label ?? "Book now";
   const headerCtaHref = siteSettings?.headerCta?.href ?? "/services";
+  const headerCtaVariant =
+    siteSettings?.headerCta?.style === "ghost"
+      ? ("ghost" as const)
+      : siteSettings?.headerCta?.style === "secondary"
+        ? ("outline" as const)
+        : ("default" as const);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -58,7 +64,7 @@ export async function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <Link href={headerCtaHref} className={buttonVariants()}>
+          <Link href={headerCtaHref} className={buttonVariants({ variant: headerCtaVariant })}>
             {headerCtaLabel}
           </Link>
         </nav>
@@ -84,7 +90,7 @@ export async function SiteHeader() {
                   {item.label}
                 </Link>
               ))}
-              <Link href={headerCtaHref} className={`${buttonVariants()} mt-2`}>
+              <Link href={headerCtaHref} className={`${buttonVariants({ variant: headerCtaVariant })} mt-2`}>
                 {headerCtaLabel}
               </Link>
             </nav>
