@@ -8,10 +8,18 @@ import { sanity } from "./sanity";
 // TYPES (kept loose for now; tighten per-use as content stabilizes)
 // ============================================================================
 
+export type Cta = {
+  label?: string;
+  href?: string;
+  style?: "primary" | "secondary" | "ghost";
+};
+
 export type SiteSettings = {
   name: string;
   tagline?: string;
   description?: string;
+  headerCta?: Cta;
+  heroCta?: Cta;
   brand?: {
     primaryColor?: string;
     secondaryColor?: string;

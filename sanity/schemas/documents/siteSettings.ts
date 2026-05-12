@@ -33,6 +33,18 @@ export const siteSettings = defineType({
       type: "brand",
     }),
     defineField({
+      name: "headerCta",
+      title: "Header button",
+      type: "cta",
+      description: "The primary button in the top navigation bar. Defaults to 'Book now' -> /services if not set.",
+    }),
+    defineField({
+      name: "heroCta",
+      title: "Homepage hero button",
+      type: "cta",
+      description: "The primary button in the homepage hero section. Defaults to 'Book now' -> /services if not set.",
+    }),
+    defineField({
       name: "contact",
       title: "Contact information",
       type: "object",

@@ -21,14 +21,16 @@ export default async function HomePage() {
   const heroTitle =
     siteSettings?.tagline ?? siteSettings?.name ?? "Welcome";
   const heroSubtitle = siteSettings?.description;
+  const heroCtaLabel = siteSettings?.heroCta?.label ?? "Book now";
+  const heroCtaHref = siteSettings?.heroCta?.href ?? "/services";
 
   return (
     <>
       <Hero
         title={heroTitle}
         subtitle={heroSubtitle}
-        ctaLabel="Book now"
-        ctaHref="/services"
+        ctaLabel={heroCtaLabel}
+        ctaHref={heroCtaHref}
       />
 
       {/* Services section */}
