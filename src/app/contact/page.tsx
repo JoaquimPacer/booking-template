@@ -9,8 +9,8 @@ import {
   buildPageMetadata,
 } from "@/lib/seo";
 
-import { REVALIDATE_SECONDS } from "@/lib/cache";
-export const revalidate = REVALIDATE_SECONDS;
+// Next.js requires segment config to be a literal; keep in sync with REVALIDATE_SECONDS in src/lib/cache.ts.
+export const revalidate = 10;
 
 export async function generateMetadata() {
   const siteSettings = await getSiteSettings();

@@ -1,11 +1,16 @@
-// Single source of truth for ISR (Incremental Static Regeneration) cache
-// durations. Edit these constants once to retune the whole site.
+// Cache duration constants used INSIDE GROQ fetch options at runtime
+// (src/lib/sanity-queries.ts). These work because they're imported as
+// runtime values.
 //
-// Tradeoff: lower = fresher content on the public site, but more Sanity API
-// calls (free tier has generous limits, so this rarely bites). For instant
-// updates after publishing, prefer on-demand revalidation via a Sanity
-// webhook hitting /api/revalidate. That requires extra setup; left as a
-// Phase 2+ polish item.
+// IMPORTANT: Next.js App Router will NOT accept imported values for
+// page-level segment config exports (`export const revalidate = ...`).
+// Those must be statically-analyzable LITERAL numbers in each page file.
+// Look for the comment "keep in sync with REVALIDATE_SECONDS" in each
+// page.tsx and update both places when retuning.
+//
+// For instant updates after publishing in Sanity, prefer on-demand
+// revalidation via a Sanity webhook hitting /api/revalidate. That removes
+// the need to retune these constants. See docs/HOW_CONTENT_FLOWS.md.
 
 /**
  * How often marketing pages re-fetch Sanity content.
