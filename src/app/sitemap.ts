@@ -2,10 +2,11 @@
 // services. Generated at request time; cached via ISR.
 
 import type { MetadataRoute } from "next";
+import { SITEMAP_REVALIDATE_SECONDS } from "@/lib/cache";
 import { getAllServices } from "@/lib/sanity-queries";
 import { getSiteUrl } from "@/lib/seo";
 
-export const revalidate = 3600; // sitemap regenerates hourly
+export const revalidate = SITEMAP_REVALIDATE_SECONDS;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteUrl();

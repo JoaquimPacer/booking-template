@@ -11,7 +11,8 @@ import {
 } from "@/lib/sanity-queries";
 import { buildLocalBusinessJsonLd, buildPageMetadata } from "@/lib/seo";
 
-export const revalidate = 60;
+import { REVALIDATE_SECONDS } from "@/lib/cache";
+export const revalidate = REVALIDATE_SECONDS;
 
 export async function generateMetadata() {
   const siteSettings = await getSiteSettings();

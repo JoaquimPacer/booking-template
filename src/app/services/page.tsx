@@ -3,7 +3,8 @@ import { ServiceCard } from "@/components/service-card";
 import { getAllServices, getSiteSettings } from "@/lib/sanity-queries";
 import { buildBreadcrumbListJsonLd, buildPageMetadata } from "@/lib/seo";
 
-export const revalidate = 60;
+import { REVALIDATE_SECONDS } from "@/lib/cache";
+export const revalidate = REVALIDATE_SECONDS;
 
 export async function generateMetadata() {
   const siteSettings = await getSiteSettings();

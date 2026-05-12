@@ -16,7 +16,8 @@ import {
   buildServiceJsonLd,
 } from "@/lib/seo";
 
-export const revalidate = 60;
+import { REVALIDATE_SECONDS } from "@/lib/cache";
+export const revalidate = REVALIDATE_SECONDS;
 
 interface ServicePageProps {
   params: Promise<{ slug: string }>;
