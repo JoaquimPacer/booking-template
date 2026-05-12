@@ -246,7 +246,7 @@ async function main() {
 
   if (!apply) {
     previewPlan(plan);
-    process.exit(0);
+    return; // natural exit; avoids libuv UV_HANDLE_CLOSING assertion on Windows
   }
 
   await applyPlan(plan, placeId);
