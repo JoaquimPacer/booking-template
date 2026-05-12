@@ -61,6 +61,16 @@ function parseArgs(): CliArgs {
     process.exit(1);
   }
 
+  if (placeId.startsWith("http") || placeId.includes("/")) {
+    console.error("Error: --place-id looks like a URL, not a Place ID.");
+    console.error("Place IDs are short strings like 'ChIJN1t_tDeuEmsRUsoyG83frY4'.");
+    console.error("");
+    console.error("Find a business's Place ID using Google's Place ID Finder:");
+    console.error("  https://developers.google.com/maps/documentation/places/web-service/place-id");
+    console.error("Search the business there; the Place ID shows in a popup. Copy that string.");
+    process.exit(1);
+  }
+
   return { placeId, apply };
 }
 
