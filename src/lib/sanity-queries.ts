@@ -34,6 +34,7 @@ export type SiteSettings = {
     favicon?: SanityImage;
   };
   homeHero?: SanityImage;
+  homeHeroVideoUrl?: string;
   homeIntroHeading?: string;
   homeIntroBody?: string;
   contact?: {

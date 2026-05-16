@@ -36,8 +36,14 @@ export const siteSettings = defineType({
       name: "homeHero",
       title: "Home page hero background image",
       type: "image",
-      description: "Large image behind the hero text on the homepage. Recommended 1920x1080+. Falls back to a gradient if not set.",
+      description: "Large image behind the hero text on the homepage. Recommended 1920x1080+. Used as fallback if homeHeroVideoUrl is not set.",
       options: { hotspot: true },
+    }),
+    defineField({
+      name: "homeHeroVideoUrl",
+      title: "Home page hero background video URL",
+      type: "url",
+      description: "Optional. Direct URL to an .mp4 video (e.g. hosted on Vercel Blob, Mux, or any CDN). Plays as the hero background; takes priority over homeHero image. Should be short (10-30s), no audio, looping-friendly.",
     }),
     defineField({
       name: "homeIntroHeading",

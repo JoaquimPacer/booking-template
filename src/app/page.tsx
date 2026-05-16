@@ -54,6 +54,7 @@ export default async function HomePage() {
         ctaLabel={heroCtaLabel}
         ctaHref={heroCtaHref}
         image={siteSettings?.homeHero ?? null}
+        videoUrl={siteSettings?.homeHeroVideoUrl ?? null}
       />
 
       {/* About preview section */}

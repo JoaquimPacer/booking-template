@@ -1,6 +1,5 @@
-// Full-width hero with overlay text. Background image is optional; falls
-// back to a tasteful gradient if siteSettings has no hero image. Used on
-// the home page; can be reused on service pages with overrides.
+// Full-width hero with overlay text. Background is video (preferred),
+// image (fallback), or gradient (final fallback). All Sanity-driven.
 
 import Image from "next/image";
 import Link from "next/link";
@@ -14,6 +13,7 @@ interface HeroProps {
   ctaLabel?: string;
   ctaHref?: string;
   image?: SanityImage | null;
+  videoUrl?: string | null;
 }
 
 export function Hero({
@@ -22,6 +22,7 @@ export function Hero({
   ctaLabel = "Book now",
   ctaHref = "/services",
   image,
+  videoUrl,
 }: HeroProps) {
   const imageUrl = image
     ? urlFor(image)?.width(2000).height(1200).fit("crop").auto("format").url()
@@ -29,7 +30,17 @@ export function Hero({
 
   return (
     <section className="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-foreground text-background">
-      {imageUrl ? (
+      {videoUrl ? (
+        <video
+          src={videoUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className="absolute inset-0 -z-10 h-full w-full object-cover"
+        />
+      ) : imageUrl ? (
         <Image
           src={imageUrl}
           alt={title}
