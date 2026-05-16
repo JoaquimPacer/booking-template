@@ -7,11 +7,11 @@
 //
 // Sanity's image CDN serves automatic WebP, AVIF, and on-the-fly resize/crop.
 
-import imageUrlBuilder from "@sanity/image-url";
+import { createImageUrlBuilder } from "@sanity/image-url";
 import { sanity } from "./sanity";
 import type { SanityImage } from "./sanity-queries";
 
-const builder = imageUrlBuilder(sanity);
+const builder = createImageUrlBuilder(sanity);
 
 export function urlFor(source: SanityImage | null | undefined) {
   if (!source) return null;
