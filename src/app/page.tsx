@@ -1,10 +1,13 @@
+import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Hero } from "@/components/hero";
 import { JsonLd } from "@/components/json-ld";
 import { ServiceCard } from "@/components/service-card";
 import { TestimonialCard } from "@/components/testimonial-card";
+import { urlFor } from "@/lib/sanity-image";
 import {
+  getAllInstructors,
   getAllServices,
   getFeaturedTestimonials,
   getSiteSettings,
@@ -27,11 +30,13 @@ export async function generateMetadata() {
 }
 
 export default async function HomePage() {
-  const [siteSettings, services, testimonials] = await Promise.all([
+  const [siteSettings, services, testimonials, instructors] = await Promise.all([
     getSiteSettings(),
     getAllServices(),
     getFeaturedTestimonials(),
+    getAllInstructors(),
   ]);
+  const primaryInstructor = instructors[0];
 
   const heroTitle =
     siteSettings?.tagline ?? siteSettings?.name ?? "Welcome";
@@ -48,7 +53,52 @@ export default async function HomePage() {
         subtitle={heroSubtitle}
         ctaLabel={heroCtaLabel}
         ctaHref={heroCtaHref}
+        image={siteSettings?.homeHero ?? null}
       />
+
+      {/* About preview section */}
+      {(siteSettings?.homeIntroHeading || siteSettings?.homeIntroBody || primaryInstructor) && (
+        <section className="container mx-auto px-4 py-20">
+          <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
+            {primaryInstructor?.photo && (
+              <div className="order-1 md:order-2">
+                <Image
+                  src={urlFor(primaryInstructor.photo)?.width(800).height(800).fit("crop").url() ?? ""}
+                  alt={primaryInstructor.name}
+                  width={600}
+                  height={600}
+                  className="aspect-square w-full rounded-2xl object-cover"
+                />
+              </div>
+            )}
+            <div className="order-2 md:order-1">
+              {siteSettings?.homeIntroHeading && (
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  {siteSettings.homeIntroHeading}
+                </h2>
+              )}
+              {siteSettings?.homeIntroBody && (
+                <p className="mt-6 whitespace-pre-line text-base text-foreground/80 md:text-lg">
+                  {siteSettings.homeIntroBody}
+                </p>
+              )}
+              {primaryInstructor && (
+                <div className="mt-6">
+                  <p className="text-base font-semibold">{primaryInstructor.name}</p>
+                  {primaryInstructor.title && (
+                    <p className="text-sm text-foreground/60">{primaryInstructor.title}</p>
+                  )}
+                </div>
+              )}
+              <div className="mt-8">
+                <Link href="/about" className={buttonVariants({ variant: "outline" })}>
+                  Learn more
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Services section */}
       {services.length > 0 && (

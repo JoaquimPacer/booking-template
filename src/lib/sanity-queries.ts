@@ -33,6 +33,9 @@ export type SiteSettings = {
     logoDark?: SanityImage;
     favicon?: SanityImage;
   };
+  homeHero?: SanityImage;
+  homeIntroHeading?: string;
+  homeIntroBody?: string;
   contact?: {
     phone?: string;
     email?: string;

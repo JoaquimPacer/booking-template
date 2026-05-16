@@ -33,6 +33,26 @@ export const siteSettings = defineType({
       type: "brand",
     }),
     defineField({
+      name: "homeHero",
+      title: "Home page hero background image",
+      type: "image",
+      description: "Large image behind the hero text on the homepage. Recommended 1920x1080+. Falls back to a gradient if not set.",
+      options: { hotspot: true },
+    }),
+    defineField({
+      name: "homeIntroHeading",
+      title: "Home page intro heading",
+      type: "string",
+      description: "Optional heading shown above the about-preview section on the home page (e.g. 'Welcome' or 'About').",
+    }),
+    defineField({
+      name: "homeIntroBody",
+      title: "Home page intro body",
+      type: "text",
+      rows: 4,
+      description: "Optional paragraph shown below the intro heading.",
+    }),
+    defineField({
       name: "headerCta",
       title: "Header button",
       type: "cta",
