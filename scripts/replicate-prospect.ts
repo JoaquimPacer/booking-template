@@ -7,7 +7,13 @@
 //
 // USAGE:
 //   npx tsx scripts/replicate-prospect.ts --place-id="ChIJ..."
-//   npx tsx scripts/replicate-prospect.ts --place-id="ChIJ..." --dry-run
+//   npx tsx scripts/replicate-prospect.ts --search="Theresa Attea LMT Austin TX"
+//   npx tsx scripts/replicate-prospect.ts --search="massage therapy Austin TX" --pick=2
+//   npx tsx scripts/replicate-prospect.ts --place-id="ChIJ..." --apply
+//
+// --search runs a Text Search on Google Places; the script prints the top 5
+// matches with their Place IDs and ratings, then proceeds with the #1 match
+// by default. Use --pick=N to choose a different rank.
 //
 // REQUIRED ENV (in .env at project root):
 //   GOOGLE_PLACES_API_KEY      Google Cloud key with Places API (New) enabled
@@ -38,40 +44,84 @@
 import "dotenv/config";
 
 interface CliArgs {
-  placeId: string;
+  placeId?: string;
+  search?: string;
+  pick: number;
   apply: boolean;
 }
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
-  let placeId = "";
+  let placeId: string | undefined;
+  let search: string | undefined;
+  let pick = 1;
   let apply = false;
 
   for (const arg of args) {
     if (arg.startsWith("--place-id=")) {
       placeId = arg.slice("--place-id=".length).replace(/^["']|["']$/g, "");
+    } else if (arg.startsWith("--search=")) {
+      search = arg.slice("--search=".length).replace(/^["']|["']$/g, "");
+    } else if (arg.startsWith("--pick=")) {
+      pick = parseInt(arg.slice("--pick=".length), 10);
     } else if (arg === "--apply") {
       apply = true;
     }
   }
 
-  if (!placeId) {
-    console.error("Error: --place-id=<id> is required.");
-    console.error('Example: npx tsx scripts/replicate-prospect.ts --place-id="ChIJ..."');
+  if (!placeId && !search) {
+    console.error("Error: pass either --place-id=<id> OR --search=\"<query>\".");
+    console.error('  npx tsx scripts/replicate-prospect.ts --search="Theresa Attea LMT Austin TX"');
+    console.error('  npx tsx scripts/replicate-prospect.ts --place-id="ChIJ..."');
     process.exit(1);
   }
 
-  if (placeId.startsWith("http") || placeId.includes("/")) {
+  if (placeId && search) {
+    console.error("Error: pass --place-id OR --search, not both.");
+    process.exit(1);
+  }
+
+  if (placeId && (placeId.startsWith("http") || placeId.includes("/"))) {
     console.error("Error: --place-id looks like a URL, not a Place ID.");
     console.error("Place IDs are short strings like 'ChIJN1t_tDeuEmsRUsoyG83frY4'.");
     console.error("");
-    console.error("Find a business's Place ID using Google's Place ID Finder:");
-    console.error("  https://developers.google.com/maps/documentation/places/web-service/place-id");
-    console.error("Search the business there; the Place ID shows in a popup. Copy that string.");
+    console.error("Either pass a direct Place ID, or use --search to look up by name:");
+    console.error('  npx tsx scripts/replicate-prospect.ts --search="business name + city"');
     process.exit(1);
   }
 
-  return { placeId, apply };
+  return { placeId, search, pick, apply };
+}
+
+interface TextSearchMatch {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  rating?: number;
+  userRatingCount?: number;
+}
+
+async function searchPlaces(query: string, apiKey: string): Promise<TextSearchMatch[]> {
+  const url = "https://places.googleapis.com/v1/places:searchText";
+  const fieldMask = "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount";
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": fieldMask,
+    },
+    body: JSON.stringify({ textQuery: query }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Places search returned ${res.status}: ${body}`);
+  }
+
+  const data = (await res.json()) as { places?: TextSearchMatch[] };
+  return data.places ?? [];
 }
 
 interface PlaceDetails {
@@ -228,8 +278,41 @@ async function applyPlan(plan: SeedPlan, _placeId: string) {
   console.log("Done. Verify at: localhost:3000 (after restart) or your Vercel deploy.");
 }
 
+async function resolvePlaceId(args: CliArgs, apiKey: string): Promise<string> {
+  if (args.placeId) return args.placeId;
+
+  // Search mode
+  console.log(`Searching Google Places for: "${args.search}"...`);
+  const matches = await searchPlaces(args.search!, apiKey);
+
+  if (matches.length === 0) {
+    console.error(`No matches found for "${args.search}". Try a more specific query (include city, state).`);
+    process.exit(1);
+  }
+
+  console.log(`\nFound ${matches.length} match${matches.length === 1 ? "" : "es"}. Top 5:\n`);
+  matches.slice(0, 5).forEach((m, i) => {
+    const star = m.rating ? `${m.rating}★` : "no rating";
+    const count = m.userRatingCount ?? 0;
+    console.log(`  ${i + 1}. ${m.displayName?.text ?? "(no name)"} (${star}, ${count} reviews)`);
+    console.log(`     ${m.formattedAddress ?? ""}`);
+    console.log(`     Place ID: ${m.id}`);
+  });
+
+  const idx = args.pick - 1;
+  if (idx < 0 || idx >= matches.length) {
+    console.error(`\n--pick=${args.pick} is out of range (1-${matches.length}).`);
+    process.exit(1);
+  }
+
+  const chosen = matches[idx];
+  console.log(`\nUsing #${args.pick}: ${chosen.displayName?.text} (${chosen.id})`);
+  console.log("(To pick a different match, re-run with --pick=N.)\n");
+  return chosen.id;
+}
+
 async function main() {
-  const { placeId, apply } = parseArgs();
+  const args = parseArgs();
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -238,13 +321,15 @@ async function main() {
     process.exit(1);
   }
 
+  const placeId = await resolvePlaceId(args, apiKey);
+
   console.log(`Fetching Place ${placeId}...`);
   const place = await fetchPlaceDetails(placeId, apiKey);
   console.log(`Got: ${place.displayName?.text ?? "(unknown)"} (${place.rating ?? "?"}★, ${place.userRatingCount ?? 0} reviews)`);
 
   const plan = buildSeedPlan(place, placeId);
 
-  if (!apply) {
+  if (!args.apply) {
     previewPlan(plan);
     return; // natural exit; avoids libuv UV_HANDLE_CLOSING assertion on Windows
   }
