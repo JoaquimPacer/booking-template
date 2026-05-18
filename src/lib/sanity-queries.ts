@@ -87,6 +87,8 @@ export type Service = {
   title: string;
   slug: { current: string };
   tagline?: string;
+  durationMinutes?: number;
+  priceCents?: number;
   description?: string;
   body?: unknown;
   heroImage?: SanityImage;

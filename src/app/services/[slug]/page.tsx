@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Clock } from "lucide-react";
 import { PortableText, type PortableTextBlock } from "@portabletext/react";
 import { buttonVariants } from "@/components/ui/button";
 import { JsonLd } from "@/components/json-ld";
 import { urlFor } from "@/lib/sanity-image";
+import { formatDurationMinutes, formatPriceCents } from "@/lib/format";
 import {
   getAllServices,
   getServiceBySlug,
@@ -90,6 +92,22 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
         </h1>
         {service.tagline && (
           <p className="mt-4 text-lg text-foreground/70">{service.tagline}</p>
+        )}
+
+        {(service.durationMinutes || service.priceCents) && (
+          <div className="mt-6 flex items-center gap-6 text-base">
+            {service.durationMinutes && (
+              <span className="inline-flex items-center gap-2 text-foreground/80">
+                <Clock className="size-4" aria-hidden="true" />
+                {formatDurationMinutes(service.durationMinutes)}
+              </span>
+            )}
+            {service.priceCents && (
+              <span className="text-xl font-semibold">
+                {formatPriceCents(service.priceCents)}
+              </span>
+            )}
+          </div>
         )}
 
         <div className="mt-8">

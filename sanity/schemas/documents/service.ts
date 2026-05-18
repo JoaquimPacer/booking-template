@@ -29,6 +29,20 @@ export const service = defineType({
       validation: (r) => r.max(120),
     }),
     defineField({
+      name: "durationMinutes",
+      title: "Duration (minutes)",
+      type: "number",
+      description: "Length of the session in minutes. Used in service cards, detail pages, and time-slot picker. Example: 60 for a one-hour session.",
+      validation: (r) => r.positive().integer(),
+    }),
+    defineField({
+      name: "priceCents",
+      title: "Price (in cents)",
+      type: "number",
+      description: "Price in CENTS (multiply dollars by 100). Example: $80 = 8000. Used for display + Stripe checkout. Stored in cents to avoid floating-point money bugs.",
+      validation: (r) => r.positive().integer(),
+    }),
+    defineField({
       name: "description",
       title: "Short description",
       type: "text",
