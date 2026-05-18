@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Inter,
+  Lora,
+  Merriweather,
+  Montserrat,
+  Playfair_Display,
+} from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -8,15 +16,35 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getSiteSettings } from "@/lib/sanity-queries";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Preload the curated set of Google Fonts available in Sanity's font dropdown.
+// Each gets its own CSS variable; we pick which one to apply at render time
+// based on siteSettings.brand.headingFont and bodyFont.
+const geistSans = Geist({ variable: "--font-geist", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"] });
+const lora = Lora({ variable: "--font-lora", subsets: ["latin"] });
+const merriweather = Merriweather({
+  variable: "--font-merriweather",
   subsets: ["latin"],
+  weight: ["400", "700"],
 });
+const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Map Sanity font names to CSS variable names.
+const FONT_VAR_MAP: Record<string, string> = {
+  Geist: "--font-geist",
+  Inter: "--font-inter",
+  "Playfair Display": "--font-playfair",
+  Lora: "--font-lora",
+  Merriweather: "--font-merriweather",
+  Montserrat: "--font-montserrat",
+};
+
+function fontVar(name: string | undefined, fallback: string): string {
+  const varName = FONT_VAR_MAP[name ?? ""] ?? "--font-geist";
+  return `var(${varName}), ${fallback}`;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -35,16 +63,25 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const siteSettings = await getSiteSettings();
+  const headingFontStack = fontVar(siteSettings?.brand?.headingFont, "system-ui, sans-serif");
+  const bodyFontStack = fontVar(siteSettings?.brand?.bodyFont, "system-ui, sans-serif");
 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${montserrat.variable} h-full antialiased`}
+      style={{
+        ["--font-heading" as string]: headingFontStack,
+        ["--font-body" as string]: bodyFontStack,
+      }}
     >
       <head>
         <BrandTheme siteSettings={siteSettings} />
       </head>
-      <body className="flex min-h-full flex-col bg-background text-foreground">
+      <body
+        className="flex min-h-full flex-col bg-background text-foreground"
+        style={{ fontFamily: "var(--font-body, system-ui, sans-serif)" }}
+      >
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />

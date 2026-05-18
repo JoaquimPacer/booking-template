@@ -25,9 +25,10 @@ export const cta = defineType({
       type: "string",
       options: {
         list: [
-          { title: "Primary (filled)", value: "primary" },
-          { title: "Secondary (outlined)", value: "secondary" },
-          { title: "Ghost (text only)", value: "ghost" },
+          { title: "Primary (filled, high contrast)", value: "primary" },
+          { title: "Secondary (outlined, transparent)", value: "secondary" },
+          { title: "Ghost (text only, minimal)", value: "ghost" },
+          { title: "Hidden (no button shown)", value: "hidden" },
         ],
         layout: "radio",
       },

@@ -22,15 +22,14 @@ export type SiteSettings = {
   headerCta?: Cta;
   heroCta?: Cta;
   brand?: {
-    primaryColor?: string;
-    secondaryColor?: string;
-    accentColor?: string;
-    backgroundColor?: string;
-    foregroundColor?: string;
+    primaryColor?: SanityColor;
+    secondaryColor?: SanityColor;
+    accentColor?: SanityColor;
+    backgroundColor?: SanityColor;
+    foregroundColor?: SanityColor;
     headingFont?: string;
     bodyFont?: string;
     logo?: SanityImage;
-    logoDark?: SanityImage;
     favicon?: SanityImage;
   };
   homeHero?: SanityImage;
@@ -66,6 +65,13 @@ export type SeoFields = {
 export type SanityImage = {
   _type: "image";
   asset: { _ref: string; _type: "reference" };
+};
+
+// @sanity/color-input returns an object like { hex: "#0ea5e9", hsl: {...}, rgb: {...}, alpha: 1 }
+// We only use the hex value.
+export type SanityColor = {
+  hex: string;
+  alpha?: number;
 };
 
 export type NavItem = {

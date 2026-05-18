@@ -54,6 +54,7 @@ export default async function HomePage() {
         subtitle={heroSubtitle}
         ctaLabel={heroCtaLabel}
         ctaHref={heroCtaHref}
+        ctaStyle={siteSettings?.heroCta?.style}
         image={siteSettings?.homeHero ?? null}
         videoUrl={siteSettings?.homeHeroVideoUrl ?? null}
         overlayOpacity={siteSettings?.homeHeroOverlayOpacity ?? null}

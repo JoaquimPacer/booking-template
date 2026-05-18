@@ -6,21 +6,29 @@
 // happens whenever a client changes their colors in Sanity Studio.
 
 import { hexToHsl } from "@/lib/hex-to-hsl";
-import type { SiteSettings } from "@/lib/sanity-queries";
+import type { SanityColor, SiteSettings } from "@/lib/sanity-queries";
 
 interface BrandThemeProps {
   siteSettings: SiteSettings | null;
+}
+
+// @sanity/color-input stores values as { hex: "#...", ... } objects.
+// We accept that shape (and string for backward compat) and return a plain hex.
+function colorHex(color: SanityColor | string | undefined, fallback: string): string {
+  if (!color) return fallback;
+  if (typeof color === "string") return color;
+  return color.hex ?? fallback;
 }
 
 export function BrandTheme({ siteSettings }: BrandThemeProps) {
   const brand = siteSettings?.brand;
 
   // Defaults match shadcn's slate base.
-  const primary = brand?.primaryColor ?? "#0f172a";
-  const secondary = brand?.secondaryColor ?? "#64748b";
-  const accent = brand?.accentColor ?? "#10b981";
-  const background = brand?.backgroundColor ?? "#ffffff";
-  const foreground = brand?.foregroundColor ?? "#0f172a";
+  const primary = colorHex(brand?.primaryColor, "#0f172a");
+  const secondary = colorHex(brand?.secondaryColor, "#64748b");
+  const accent = colorHex(brand?.accentColor, "#10b981");
+  const background = colorHex(brand?.backgroundColor, "#ffffff");
+  const foreground = colorHex(brand?.foregroundColor, "#0f172a");
 
   const css = `:root {
   --primary: ${hexToHsl(primary)};

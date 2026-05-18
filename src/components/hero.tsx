@@ -14,9 +14,16 @@ interface HeroProps {
   subtitle?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  ctaStyle?: "primary" | "secondary" | "ghost" | "hidden" | string;
   image?: SanityImage | null;
   videoUrl?: string | null;
   overlayOpacity?: number | null;
+}
+
+function ctaVariantFor(style: string | undefined) {
+  if (style === "secondary") return "outline" as const;
+  if (style === "ghost") return "ghost" as const;
+  return "default" as const;
 }
 
 export function Hero({
@@ -24,6 +31,7 @@ export function Hero({
   subtitle,
   ctaLabel = "Book now",
   ctaHref = "/services",
+  ctaStyle,
   image,
   videoUrl,
   overlayOpacity,
@@ -33,6 +41,8 @@ export function Hero({
     : null;
 
   const overlayAlpha = Math.min(80, Math.max(0, overlayOpacity ?? 35)) / 100;
+  const showCta = ctaStyle !== "hidden";
+  const variant = ctaVariantFor(ctaStyle);
 
   return (
     <section className="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-foreground text-background">
@@ -84,14 +94,18 @@ export function Hero({
             {subtitle}
           </p>
         )}
-        <div className="mt-10 flex justify-center">
-          <Link
-            href={ctaHref}
-            className={`${buttonVariants({ size: "lg" })} px-8 text-base`}
-          >
-            {ctaLabel}
-          </Link>
-        </div>
+        {showCta && (
+          <div className="mt-10 flex justify-center">
+            <Link
+              href={ctaHref}
+              className={`${buttonVariants({ size: "lg", variant })} px-8 text-base ${
+                variant === "outline" ? "border-2 border-background bg-transparent text-background hover:bg-background/10" : ""
+              }`}
+            >
+              {ctaLabel}
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
