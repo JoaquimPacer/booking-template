@@ -35,8 +35,10 @@ export type SiteSettings = {
   };
   homeHero?: SanityImage;
   homeHeroVideoUrl?: string;
+  homeHeroOverlayOpacity?: number;
   homeIntroHeading?: string;
   homeIntroBody?: string;
+  homeGallery?: SanityImage[];
   contact?: {
     phone?: string;
     email?: string;

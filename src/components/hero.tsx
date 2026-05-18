@@ -1,5 +1,7 @@
 // Full-width hero with overlay text. Background is video (preferred),
 // image (fallback), or gradient (final fallback). All Sanity-driven.
+// Overlay opacity is configurable per-client; text-shadow on the title
+// adds extra legibility safety regardless of overlay strength.
 
 import Image from "next/image";
 import Link from "next/link";
@@ -14,6 +16,7 @@ interface HeroProps {
   ctaHref?: string;
   image?: SanityImage | null;
   videoUrl?: string | null;
+  overlayOpacity?: number | null;
 }
 
 export function Hero({
@@ -23,10 +26,13 @@ export function Hero({
   ctaHref = "/services",
   image,
   videoUrl,
+  overlayOpacity,
 }: HeroProps) {
   const imageUrl = image
     ? urlFor(image)?.width(2000).height(1200).fit("crop").auto("format").url()
     : null;
+
+  const overlayAlpha = Math.min(80, Math.max(0, overlayOpacity ?? 35)) / 100;
 
   return (
     <section className="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-foreground text-background">
@@ -58,13 +64,23 @@ export function Hero({
           }}
         />
       )}
-      <div className="absolute inset-0 -z-10 bg-black/50" aria-hidden="true" />
+      <div
+        className="absolute inset-0 -z-10"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${overlayAlpha})` }}
+        aria-hidden="true"
+      />
       <div className="container mx-auto max-w-3xl px-4 py-24 text-center">
-        <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+        <h1
+          className="text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
+          style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+        >
           {title}
         </h1>
         {subtitle && (
-          <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-background/90 md:text-xl">
+          <p
+            className="mx-auto mt-6 max-w-2xl text-balance text-lg text-background/90 md:text-xl"
+            style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
+          >
             {subtitle}
           </p>
         )}

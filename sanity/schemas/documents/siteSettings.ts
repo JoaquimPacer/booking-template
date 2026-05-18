@@ -46,6 +46,14 @@ export const siteSettings = defineType({
       description: "Optional. Direct URL to an .mp4 video (e.g. hosted on Vercel Blob, Mux, or any CDN). Plays as the hero background; takes priority over homeHero image. Should be short (10-30s), no audio, looping-friendly.",
     }),
     defineField({
+      name: "homeHeroOverlayOpacity",
+      title: "Home page hero overlay darkness (0-80)",
+      type: "number",
+      description: "Strength of the dark overlay on top of the hero image/video, as a percentage. Higher = darker (better text legibility). Lower = brighter (video shows through more). Default 35.",
+      initialValue: 35,
+      validation: (r) => r.min(0).max(80),
+    }),
+    defineField({
       name: "homeIntroHeading",
       title: "Home page intro heading",
       type: "string",
@@ -57,6 +65,14 @@ export const siteSettings = defineType({
       type: "text",
       rows: 4,
       description: "Optional paragraph shown below the intro heading.",
+    }),
+    defineField({
+      name: "homeGallery",
+      title: "Home page gallery images",
+      type: "array",
+      of: [{ type: "image", options: { hotspot: true } }],
+      description: "Optional. 3-6 images shown in a grid on the homepage. Use for showing the space, atmosphere, or before/after.",
+      validation: (r) => r.max(8),
     }),
     defineField({
       name: "headerCta",

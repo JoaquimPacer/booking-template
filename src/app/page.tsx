@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { GalleryGrid } from "@/components/gallery-grid";
 import { Hero } from "@/components/hero";
 import { JsonLd } from "@/components/json-ld";
 import { ServiceCard } from "@/components/service-card";
@@ -55,6 +56,7 @@ export default async function HomePage() {
         ctaHref={heroCtaHref}
         image={siteSettings?.homeHero ?? null}
         videoUrl={siteSettings?.homeHeroVideoUrl ?? null}
+        overlayOpacity={siteSettings?.homeHeroOverlayOpacity ?? null}
       />
 
       {/* About preview section */}
@@ -127,14 +129,22 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Gallery section */}
+      {siteSettings?.homeGallery && siteSettings.homeGallery.length > 0 && (
+        <GalleryGrid images={siteSettings.homeGallery} />
+      )}
+
       {/* Testimonials section */}
       {testimonials.length > 0 && (
-        <section className="border-t border-border bg-muted/30 py-20">
+        <section className="border-t border-border py-20">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
                 What clients are saying
               </h2>
+              <p className="mt-4 text-base text-foreground/70">
+                Real reviews from real people.
+              </p>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {testimonials.slice(0, 6).map((testimonial) => (
