@@ -1,11 +1,12 @@
 // Injects Sanity-driven brand colors as inline CSS variables on the document.
 // Renders in the <head> from src/app/layout.tsx; runs server-side, no client JS.
 //
-// shadcn/ui's components read CSS variables like `--primary` (HSL parts).
-// We override those from siteSettings.brand so the entire site retheme
-// happens whenever a client changes their colors in Sanity Studio.
+// We override the shadcn CSS variables (--primary, --background, etc.) so the
+// entire site retheme happens whenever a client changes their colors in
+// Sanity Studio. Tailwind v4 expects valid color values (hex, oklch, rgb,
+// or hsl-with-parens) in CSS variables; bare HSL components like
+// "199 89% 48%" don't work, which is why we emit hex directly.
 
-import { hexToHsl } from "@/lib/hex-to-hsl";
 import type { SanityColor, SiteSettings } from "@/lib/sanity-queries";
 
 interface BrandThemeProps {
@@ -13,7 +14,7 @@ interface BrandThemeProps {
 }
 
 // @sanity/color-input stores values as { hex: "#...", ... } objects.
-// We accept that shape (and string for backward compat) and return a plain hex.
+// Accept that shape (and string for backward compat) and return a plain hex.
 function colorHex(color: SanityColor | string | undefined, fallback: string): string {
   if (!color) return fallback;
   if (typeof color === "string") return color;
@@ -23,22 +24,24 @@ function colorHex(color: SanityColor | string | undefined, fallback: string): st
 export function BrandTheme({ siteSettings }: BrandThemeProps) {
   const brand = siteSettings?.brand;
 
-  // Defaults match shadcn's slate base.
+  // Defaults match shadcn's slate base (just dark neutral primary).
   const primary = colorHex(brand?.primaryColor, "#0f172a");
-  const secondary = colorHex(brand?.secondaryColor, "#64748b");
-  const accent = colorHex(brand?.accentColor, "#10b981");
+  const secondary = colorHex(brand?.secondaryColor, "#f1f5f9");
+  const accent = colorHex(brand?.accentColor, "#f1f5f9");
   const background = colorHex(brand?.backgroundColor, "#ffffff");
   const foreground = colorHex(brand?.foregroundColor, "#0f172a");
 
+  // Emit hex values directly. Tailwind v4's @theme inline resolves
+  // `bg-primary` -> `background-color: var(--primary)` -> the hex below.
   const css = `:root {
-  --primary: ${hexToHsl(primary)};
-  --primary-foreground: ${hexToHsl(background)};
-  --secondary: ${hexToHsl(secondary)};
-  --secondary-foreground: ${hexToHsl(foreground)};
-  --accent: ${hexToHsl(accent)};
-  --accent-foreground: ${hexToHsl(foreground)};
-  --background: ${hexToHsl(background)};
-  --foreground: ${hexToHsl(foreground)};
+  --primary: ${primary};
+  --primary-foreground: ${background};
+  --secondary: ${secondary};
+  --secondary-foreground: ${foreground};
+  --accent: ${accent};
+  --accent-foreground: ${foreground};
+  --background: ${background};
+  --foreground: ${foreground};
   --brand-primary: ${primary};
   --brand-secondary: ${secondary};
   --brand-accent: ${accent};
