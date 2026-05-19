@@ -1,4 +1,5 @@
 import { defineField, defineType } from "sanity";
+import { FontPicker } from "../../components/FontPicker";
 
 // Brand theme tokens. Inject as CSS variables at runtime in src/app/layout.tsx
 // so the entire site retheme happens whenever these values change in Sanity.
@@ -47,36 +48,17 @@ export const brand = defineType({
       name: "headingFont",
       title: "Heading font",
       type: "string",
-      description: "Font family for headings (h1-h6). Used for the hero title, section headings, etc.",
-      options: {
-        list: [
-          { title: "Geist (modern, clean sans-serif; default)", value: "Geist" },
-          { title: "Inter (versatile modern sans-serif)", value: "Inter" },
-          { title: "Playfair Display (elegant serif; luxury feel)", value: "Playfair Display" },
-          { title: "Lora (warm serif; approachable)", value: "Lora" },
-          { title: "Merriweather (traditional serif)", value: "Merriweather" },
-          { title: "Montserrat (modern geometric sans)", value: "Montserrat" },
-        ],
-        layout: "dropdown",
-      },
+      description: "Font family for headings (h1-h6). Each dropdown option previews in its own font.",
       initialValue: "Geist",
+      components: { input: FontPicker },
     }),
     defineField({
       name: "bodyFont",
       title: "Body font",
       type: "string",
       description: "Font family for paragraph text. Should be highly readable.",
-      options: {
-        list: [
-          { title: "Geist (modern, clean sans-serif; default)", value: "Geist" },
-          { title: "Inter (versatile modern sans-serif)", value: "Inter" },
-          { title: "Lora (warm serif)", value: "Lora" },
-          { title: "Merriweather (traditional serif)", value: "Merriweather" },
-          { title: "Montserrat (modern geometric sans)", value: "Montserrat" },
-        ],
-        layout: "dropdown",
-      },
       initialValue: "Geist",
+      components: { input: FontPicker },
     }),
     defineField({
       name: "logo",
