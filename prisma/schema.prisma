@@ -36,6 +36,7 @@ model Studio {
   availabilityRules      AvailabilityRule[]
   availabilityExceptions AvailabilityException[]
   bookings               Booking[]
+  coupons                Coupon[]
 }
 
 model User {
@@ -116,6 +117,9 @@ model Booking {
   endTime            DateTime // UTC always
   status             BookingStatus    @default(PENDING)
   cancellationReason String?
+  cancelledAt        DateTime? // when the booking was cancelled, if it was
+  couponId           String? // coupon (credit) redeemed at checkout, if any
+  couponCents        Int? // discount applied from the coupon, in cents
   formResponses      Json? // intake form data, schema in app
   googleEventId      String? // Google Calendar event id once created
   studio             Studio           @relation(fields: [studioId], references: [id])
@@ -163,4 +167,31 @@ enum PaymentStatus {
   PAID
   REFUNDED
   PARTIALLY_REFUNDED
+}
+
+model Coupon {
+  // A credit issued to a customer (e.g. after a cancellation) OR a manual
+  // promo code. Fixed dollar amount in cents. Redeemed at checkout.
+  id                String       @id @default(cuid())
+  studioId          String
+  code              String       @unique // human-friendly, e.g. "THER-7K2M"
+  customerEmail     String? // who the credit was issued to
+  amountCents       Int // fixed dollar credit value, in cents
+  status            CouponStatus @default(ACTIVE)
+  reason            String? // "Cancelled 3+ days out", "Goodwill", "Promo"
+  sourceBookingId   String? // the cancelled booking that generated this credit
+  redeemedBookingId String? // the booking that consumed this credit
+  createdAt         DateTime     @default(now())
+  usedAt            DateTime?
+  expiresAt         DateTime? // optional expiry; null = never expires
+  studio            Studio       @relation(fields: [studioId], references: [id])
+
+  @@index([studioId, status])
+  @@index([customerEmail])
+}
+
+enum CouponStatus {
+  ACTIVE
+  USED
+  EXPIRED
 }
