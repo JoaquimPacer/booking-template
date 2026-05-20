@@ -42,6 +42,8 @@ type ManagedService = {
   durationMinutes: number;
   priceCents: number;
   order: number;
+  // "slots" (default) = online time-slot booking. "inquire" = contact-to-book.
+  bookingMode?: "slots" | "inquire" | "hidden";
 };
 
 // Her 12 unique services. The 60/90 pairs carry the length in the title so they
@@ -166,6 +168,8 @@ const SERVICES: ManagedService[] = [
     durationMinutes: 75,
     priceCents: 65000,
     order: 120,
+    // Multi-session package: contact-to-book until package purchase is built (Phase 2E).
+    bookingMode: "inquire",
   },
 ];
 
@@ -236,6 +240,7 @@ async function main() {
       description: s.description,
       durationMinutes: s.durationMinutes,
       priceCents: s.priceCents,
+      bookingMode: s.bookingMode ?? "slots",
       order: s.order,
     };
     if (existingById.has(id)) {

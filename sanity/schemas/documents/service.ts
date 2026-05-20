@@ -98,6 +98,22 @@ export const service = defineType({
       initialValue: true,
     }),
     defineField({
+      name: "bookingMode",
+      title: "How can this be booked?",
+      type: "string",
+      description:
+        "Online booking shows the time-slot picker. Inquire only shows a 'contact to book' button instead (use this for packages or anything you handle by hand). Not bookable hides the booking button entirely.",
+      options: {
+        list: [
+          { title: "Online booking (time-slot picker)", value: "slots" },
+          { title: "Inquire only (contact to book)", value: "inquire" },
+          { title: "Not bookable (hide booking button)", value: "hidden" },
+        ],
+        layout: "radio",
+      },
+      initialValue: "slots",
+    }),
+    defineField({
       name: "seo",
       title: "SEO override",
       type: "seo",
