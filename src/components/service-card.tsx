@@ -1,6 +1,9 @@
-// Service card. Title + tagline + optional photo + duration + price + Book button.
-// Photo appears if service.heroImage is set in Sanity; otherwise text-only.
-// Duration + price appear only if they're set on the service.
+// Service card. The WHOLE card is clickable (navigates to the service detail
+// page) via a stretched link. The Book button sits on top (higher z-index)
+// and navigates to booking instead. Avoids invalid nested <a> tags.
+//
+// Shows: optional photo, title, tagline, duration, price, and a Book button.
+// Photo/duration/price appear only when set in Sanity.
 
 import Image from "next/image";
 import Link from "next/link";
@@ -23,7 +26,15 @@ export function ServiceCard({ service }: ServiceCardProps) {
   const price = formatPriceCents(service.priceCents);
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
+      {/* Stretched link: covers the whole card, navigates to the detail page.
+          Sits behind interactive children via z-0. */}
+      <Link
+        href={`/services/${service.slug.current}`}
+        className="absolute inset-0 z-0"
+        aria-label={`Learn more about ${service.title}`}
+      />
+
       {imageUrl && (
         <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
           <Image
@@ -31,12 +42,14 @@ export function ServiceCard({ service }: ServiceCardProps) {
             alt={service.title}
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover transition-transform group-hover:scale-105"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </div>
       )}
       <CardHeader>
-        <CardTitle className="text-xl">{service.title}</CardTitle>
+        <CardTitle className="text-xl transition-colors group-hover:text-primary">
+          {service.title}
+        </CardTitle>
         {service.tagline && (
           <p className="mt-2 text-sm text-foreground/70">{service.tagline}</p>
         )}
@@ -53,15 +66,13 @@ export function ServiceCard({ service }: ServiceCardProps) {
         )}
       </CardHeader>
       <CardContent className="mt-auto flex items-center justify-between pt-4">
-        <Link
-          href={`/services/${service.slug.current}`}
-          className="text-sm font-medium text-foreground/80 hover:text-foreground"
-        >
+        <span className="text-sm font-medium text-foreground/60 transition-colors group-hover:text-foreground">
           Learn more &rarr;
-        </Link>
+        </span>
+        {/* Book button: raised above the stretched link so it's independently clickable. */}
         <Link
           href={`/book/${service.slug.current}`}
-          className={buttonVariants({ size: "sm" })}
+          className={`relative z-10 ${buttonVariants({ size: "sm" })}`}
         >
           Book
         </Link>
