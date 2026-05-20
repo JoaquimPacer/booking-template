@@ -1,204 +1,261 @@
 /* eslint-disable no-console */
 // scripts/seed-theresa-services.ts
 //
-// One-time seed: creates Theresa Attea's services + her instructor doc in
-// whatever Sanity project the current .env points at.
+// Canonical, idempotent seeder for Theresa Attea's real service menu.
+// Source of truth: her JaneApp page (cancerrehab.janeapp.com), prices + durations
+// read off the live page on 2026-05-20. Descriptions are her own JaneApp copy,
+// lightly cleaned (typos fixed).
 //
 // HOW TO USE:
-//   1. In .env, set NEXT_PUBLIC_SANITY_PROJECT_ID to Theresa's Sanity project ID (7vrjehyn).
-//   2. Run: npx tsx scripts/seed-theresa-services.ts --apply
-//   3. Service docs and her Instructor doc appear in her Sanity Studio under "production".
+//   1. In .env, set NEXT_PUBLIC_SANITY_PROJECT_ID to Theresa's project (7vrjehyn)
+//      and SANITY_API_WRITE_TOKEN to an Editor token.
+//   2. Dry run (no writes, just prints the plan + writes a backup file):
+//        npx tsx scripts/seed-theresa-services.ts
+//   3. Apply:
+//        npx tsx scripts/seed-theresa-services.ts --apply
 //
-// WHAT IT CREATES (8 docs total):
-//   - 1 Instructor doc: Theresa Attea
-//   - 7 Service docs: her 7 modalities pulled from cancerrehabaustin.com/theresa-attea
+// SAFETY / REVERSIBILITY:
+//   - Before any change it dumps ALL current service docs to
+//     backups/sanity-services-<timestamp>.json. Restore with
+//     scripts/restore-sanity-services.ts <file>.
+//   - Canonical docs use DETERMINISTIC ids ("service-<slug>") so re-running is safe.
+//   - Existing canonical docs are PATCHED (only the managed text/number fields are
+//     set); heroImage, gallery, body, whatToExpect and seo are LEFT UNTOUCHED, so
+//     photos and rich text added in Studio survive a re-run.
+//   - Any service doc whose id is not in the canonical set is deleted (this is how
+//     the old placeholder docs + the "Myofascial Release" orphan get removed).
+//   - The Instructor doc is intentionally NOT touched here.
 //
-// DURATION + PRICE are left empty because they're not public on her existing site.
-// Joaquim fills those manually in Sanity Studio after asking Theresa OR using
-// reasonable Austin-market placeholders for the pitch.
-//
-// All data is editable in Sanity Studio after creation; this script just sets
-// initial values.
+// All values remain editable in Sanity Studio afterward.
 
 import "dotenv/config";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { groq } from "next-sanity";
 
-// Service definitions. Tagline = short blurb shown on cards. Description =
-// longer text used on detail page. Sourced from her about page + standard
-// modality descriptions; edit freely after seeding.
-const SERVICES = [
+// Fields this script owns. Anything NOT in this list (heroImage, gallery, body,
+// whatToExpect, seo) is preserved on existing docs.
+type ManagedService = {
+  slug: string;
+  title: string;
+  tagline: string;
+  description: string;
+  durationMinutes: number;
+  priceCents: number;
+  order: number;
+};
+
+// Her 12 unique services. The 60/90 pairs carry the length in the title so they
+// are distinguishable in a list (the duration badge shows it too). "with Theresa"
+// is dropped: it is redundant on her own site.
+const SERVICES: ManagedService[] = [
   {
-    title: "Oncology Massage",
-    slug: "oncology-massage",
-    tagline:
-      "Gentle, specialized care for those in or after cancer treatment",
+    slug: "oncology-massage-60",
+    title: "Oncology Massage (60 min)",
+    tagline: "Gentle, specialized care during and after cancer treatment",
     description:
-      "An individually tailored massage session for clients in active cancer treatment or with a history of cancer. Gentle pressure, careful positioning, and oncology-trained technique. Benefits include reduced pain, decreased anxiety and stress, relief from nausea, diminished peripheral neuropathy, less swelling, increased energy, and improved overall well-being.",
+      "A gentle massage session designed to promote health and wellbeing during and after cancer treatment.",
+    durationMinutes: 60,
+    priceCents: 13500,
     order: 10,
   },
   {
-    title: "Craniosacral Therapy",
-    slug: "craniosacral-therapy",
-    tagline: "A subtle, gentle technique that supports the body's natural rhythm",
+    slug: "oncology-massage-90",
+    title: "Oncology Massage (90 min)",
+    tagline: "Gentle, specialized care during and after cancer treatment",
     description:
-      "Craniosacral therapy uses light touch (about the weight of a nickel) to release tension deep in the central nervous system. Supports stress reduction, headaches, chronic pain, sleep issues, and emotional regulation. Particularly useful for those who find conventional massage too intense.",
+      "A gentle, 90-minute massage session designed to promote health and wellbeing during and after cancer treatment.",
+    durationMinutes: 90,
+    priceCents: 17500,
     order: 20,
   },
   {
-    title: "Swedish Massage",
-    slug: "swedish-massage",
-    tagline: "Flowing, rhythmic strokes for full-body relaxation",
+    slug: "manual-lymphatic-drainage",
+    title: "Manual Lymphatic Drainage",
+    tagline: "Gentle technique to reduce swelling and support immune function",
     description:
-      "The classic massage modality: long flowing strokes, kneading, and gentle pressure to ease muscle tension, improve circulation, and promote deep relaxation. A great starting point if you're new to bodywork or want a restorative session.",
+      "Manual Lymphatic Drainage (MLD) is a gentle massage technique that improves lymphatic system flow, reduces swelling, stimulates immune function, decreases pain, and soothes the nervous system. MLD is especially helpful post-operatively to decrease swelling and after lymph node removal for cancer treatment.",
+    durationMinutes: 90,
+    priceCents: 18500,
     order: 30,
   },
   {
-    title: "Myofascial Release",
-    slug: "myofascial-release",
-    tagline: "Sustained pressure to release connective-tissue restrictions",
+    slug: "craniosacral-therapy",
+    title: "Craniosacral Therapy",
+    tagline: "Light-touch work to relieve restrictions and calm the nervous system",
     description:
-      "Myofascial release applies steady, gentle pressure into the connective tissue restrictions to eliminate pain and restore motion. Effective for chronic pain, sports recovery, and movement dysfunction.",
+      "Light touch applied to the head, spine, and sacrum to relieve restrictions in these structures and balance the nervous system. Effective for chronic pain, headaches, insomnia, and general wellbeing.",
+    durationMinutes: 90,
+    priceCents: 17500,
     order: 40,
   },
   {
-    title: "Manual Lymphatic Drainage",
-    slug: "manual-lymphatic-drainage",
-    tagline: "Specialized technique to reduce swelling and support immune function",
+    slug: "structural-bodywork",
+    title: "Structural Bodywork",
+    tagline: "Posture and movement work that gets to the root of pain",
     description:
-      "Manual lymphatic drainage is a gentle, rhythmic technique designed to support the lymphatic system. Often used for lymphedema, post-surgical recovery, immune support, and reducing inflammation. Performed by a CMLDT (Certified Manual Lymphatic Drainage Therapist).",
+      "Posture analysis and massage techniques to improve the body's structure and mobility. Gets to the root cause of pain and limitations.",
+    durationMinutes: 90,
+    priceCents: 17500,
     order: 50,
   },
   {
-    title: "Structural Integration",
-    slug: "structural-integration",
-    tagline: "Realigning posture and movement through deep fascia work",
-    description:
-      "Structural integration is a systematic process of releasing patterns of stress and impaired function through manipulation of the body's fascia. Goal: better posture, freer movement, and reduced chronic pain.",
+    slug: "swedish-massage-60",
+    title: "Swedish Massage (60 min)",
+    tagline: "Classic full-body relaxation massage",
+    description: "General relaxation massage.",
+    durationMinutes: 60,
+    priceCents: 13500,
     order: 60,
   },
   {
-    title: "Reiki and Energy Balancing",
-    slug: "reiki-energy-balancing",
-    tagline: "Gentle hands-on energy work for relaxation and balance",
+    slug: "swedish-massage-90",
+    title: "Swedish Massage (90 min)",
+    tagline: "Relaxation massage for mobility, pain relief, and stress reduction",
     description:
-      "A light-touch (or no-touch) modality intended to support the body's natural healing processes. Many clients use Reiki alongside traditional medical care for stress reduction, sleep support, and a sense of calm.",
+      "General relaxation massage to improve range of motion and flexibility, relieve pain, reduce stress, and improve mood.",
+    durationMinutes: 90,
+    priceCents: 17500,
     order: 70,
   },
   {
-    title: "Infant and Pediatric Massage",
-    slug: "infant-pediatric-massage",
-    tagline: "Specialized, gentle work for babies and children",
+    slug: "reiki",
+    title: "Reiki",
+    tagline: "Gentle energy work to support the body's natural healing",
     description:
-      "Massage adapted for infants and children. Used to support sleep, digestion, bonding, and general well-being. Also helpful for kids with chronic conditions or sensory needs.",
+      "Energy is channeled by the therapist, through touch, to activate the body's natural healing processes and restore physical and emotional wellbeing.",
+    durationMinutes: 60,
+    priceCents: 13500,
     order: 80,
+  },
+  {
+    slug: "pregnancy-massage",
+    title: "Pregnancy Massage",
+    tagline: "Supportive massage for the mother-to-be",
+    description:
+      "Massage that focuses on the special needs of the mother-to-be and supports the body as it changes throughout pregnancy.",
+    durationMinutes: 60,
+    priceCents: 13500,
+    order: 90,
+  },
+  {
+    slug: "pediatric-massage",
+    title: "Pediatric Massage",
+    tagline: "Skilled, nurturing touch for infants and children",
+    description:
+      "Skilled, nurturing touch for infants and children, aged newborn to 12 years, with medical conditions and specialized needs, or experiencing the common troubles of childhood (for example: sleeping difficulties, tension headaches, gas, growing pains).",
+    durationMinutes: 45,
+    priceCents: 12000,
+    order: 100,
+  },
+  {
+    slug: "neuropathy-massage",
+    title: "Neuropathy Massage (single session)",
+    tagline: "Single session to ease the symptoms of peripheral neuropathy",
+    description:
+      "A massage session focused on increasing circulation and alleviating the symptoms of peripheral neuropathy. The session focuses on the feet (and/or hands) with heat lamp application to support circulation and nerve healing, along with a daily self-massage home and exercise program.",
+    durationMinutes: 75,
+    priceCents: 17500,
+    order: 110,
+  },
+  {
+    slug: "neuropathy-no-more",
+    title: "Neuropathy No More (4-session package)",
+    tagline: "A four-session program to relieve peripheral neuropathy",
+    description:
+      "A series of four massage sessions focused on increasing circulation and alleviating the symptoms of peripheral neuropathy. The protocol consists of weekly one-hour massage sessions, focusing on the feet (and/or hands) with heat lamp application to support circulation and nerve healing, along with a daily self-massage program.",
+    durationMinutes: 75,
+    priceCents: 65000,
+    order: 120,
   },
 ];
 
-// Instructor doc for Theresa. Bio + credentials pulled from her about page.
-const INSTRUCTOR = {
-  name: "Theresa Attea",
-  title: "LMT, CMLDT, LMTI, RN, BSN",
-  slug: "theresa-attea",
-  yearsExperience: 28,
-  specialties:
-    "Oncology massage, Craniosacral therapy, Manual lymphatic drainage, Myofascial release, Pediatric massage",
-  // Bio is a portable text array (rich text). Each block is a paragraph.
-  bio: [
-    {
-      _type: "block",
-      _key: "p1",
-      style: "normal",
-      children: [
-        {
-          _type: "span",
-          _key: "p1s1",
-          text: "Theresa Attea has practiced massage therapy since 1996, bringing nearly three decades of experience to her work. She is a Licensed Massage Therapist (LMT), Certified Manual Lymphatic Drainage Therapist (CMLDT), Licensed Massage Therapy Instructor (LMTI), and a Registered Nurse (RN) with a Bachelor of Science in Nursing (BSN).",
-          marks: [],
-        },
-      ],
-      markDefs: [],
-    },
-    {
-      _type: "block",
-      _key: "p2",
-      style: "normal",
-      children: [
-        {
-          _type: "span",
-          _key: "p2s1",
-          text: "Before transitioning fully into bodywork, Theresa spent 25 years as a critical care nurse, specializing in pediatrics and patient safety. She is a two-time cancer survivor and stem cell transplant recipient, which deeply informs her approach to oncology massage and her care for clients facing serious illness.",
-          marks: [],
-        },
-      ],
-      markDefs: [],
-    },
-    {
-      _type: "block",
-      _key: "p3",
-      style: "normal",
-      children: [
-        {
-          _type: "span",
-          _key: "p3s1",
-          text: "Theresa trained at the Lauterstein-Conway School of Massage Therapy, completed oncology massage training in Tracy Walton's curriculum, and currently teaches massage therapy at Austin Community College. Every session is tailored to the client in front of her: her work blends technical skill, clinical knowledge, and warmth.",
-          marks: [],
-        },
-      ],
-      markDefs: [],
-    },
-  ],
-};
+const docId = (slug: string) => `service-${slug}`;
+
+interface ServiceDoc {
+  _id: string;
+  title?: string;
+  slug?: { current?: string };
+  priceCents?: number;
+  durationMinutes?: number;
+}
 
 async function main() {
   const apply = process.argv.includes("--apply");
   const { sanityWrite } = await import("../src/lib/sanity-write");
 
-  console.log(`Seeding to project: ${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}`);
-  console.log(`Dataset: ${process.env.NEXT_PUBLIC_SANITY_DATASET ?? "production"}`);
+  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
+  const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET ?? "production";
+  console.log(`Project: ${projectId}`);
+  console.log(`Dataset: ${dataset}`);
   console.log("");
-  console.log(`Plan: 1 Instructor doc + ${SERVICES.length} Service docs.`);
+
+  // 1. Snapshot current state (backup) BEFORE touching anything.
+  const existing = await sanityWrite.fetch<ServiceDoc[]>(
+    groq`*[_type == "service"]`,
+  );
+  mkdirSync("backups", { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupPath = `backups/sanity-services-${stamp}.json`;
+  writeFileSync(
+    backupPath,
+    JSON.stringify({ projectId, dataset, services: existing }, null, 2),
+  );
+  console.log(`Backed up ${existing.length} existing service doc(s) -> ${backupPath}`);
+  console.log("");
+
+  const canonicalIds = new Set(SERVICES.map((s) => docId(s.slug)));
+  const existingById = new Map(existing.map((d) => [d._id, d]));
+  const toDelete = existing.filter(
+    (d) => !canonicalIds.has(d._id) && !canonicalIds.has(d._id.replace(/^drafts\./, "")),
+  );
+
+  console.log("Plan:");
+  for (const s of SERVICES) {
+    const verb = existingById.has(docId(s.slug)) ? "PATCH " : "CREATE";
+    console.log(
+      `  ${verb} ${docId(s.slug)}  ${s.title}  (${s.durationMinutes}min, $${s.priceCents / 100})`,
+    );
+  }
+  for (const d of toDelete) {
+    console.log(`  DELETE ${d._id}  ${d.title ?? "(untitled)"}  [not in canonical set]`);
+  }
   console.log("");
 
   if (!apply) {
-    console.log("(Dry-run. Re-run with --apply to actually write.)");
-    SERVICES.forEach((s) => console.log(`  Service: ${s.title}`));
-    console.log(`  Instructor: ${INSTRUCTOR.name}`);
+    console.log("(Dry-run. Backup written above. Re-run with --apply to write.)");
     return;
   }
 
-  // Create the instructor doc.
-  console.log(`Creating instructor: ${INSTRUCTOR.name}...`);
-  await sanityWrite.create({
-    _type: "instructor",
-    name: INSTRUCTOR.name,
-    title: INSTRUCTOR.title,
-    slug: { _type: "slug", current: INSTRUCTOR.slug },
-    yearsExperience: INSTRUCTOR.yearsExperience,
-    specialties: INSTRUCTOR.specialties,
-    bio: INSTRUCTOR.bio,
-  });
+  // 2. Upsert canonical docs. Patch preserves images/rich-text on existing docs.
+  for (const s of SERVICES) {
+    const id = docId(s.slug);
+    const managed = {
+      title: s.title,
+      slug: { _type: "slug", current: s.slug },
+      tagline: s.tagline,
+      description: s.description,
+      durationMinutes: s.durationMinutes,
+      priceCents: s.priceCents,
+      order: s.order,
+    };
+    if (existingById.has(id)) {
+      await sanityWrite.patch(id).set(managed).commit();
+      console.log(`Patched ${id}`);
+    } else {
+      await sanityWrite.create({ _id: id, _type: "service", isActive: true, ...managed });
+      console.log(`Created ${id}`);
+    }
+  }
 
-  // Create each service doc.
-  for (const [i, svc] of SERVICES.entries()) {
-    console.log(`Creating service ${i + 1}/${SERVICES.length}: ${svc.title}...`);
-    await sanityWrite.create({
-      _type: "service",
-      title: svc.title,
-      slug: { _type: "slug", current: svc.slug },
-      tagline: svc.tagline,
-      description: svc.description,
-      order: svc.order,
-      isActive: true,
-      // durationMinutes and priceCents intentionally left undefined.
-      // Joaquim fills these in Sanity Studio after confirming with Theresa.
-    });
+  // 3. Remove docs not in the canonical set (old placeholders + orphan).
+  for (const d of toDelete) {
+    await sanityWrite.delete(d._id);
+    console.log(`Deleted ${d._id}`);
   }
 
   console.log("");
-  console.log("Done. Verify in Sanity Studio:");
-  console.log("  1. Switch to the project's dataset (already production).");
-  console.log("  2. Click Service in sidebar to see all 7.");
-  console.log("  3. Click Instructor to see Theresa Attea.");
-  console.log("  4. Fill in Duration + Price on each Service per real-world values.");
+  console.log(`Done. ${SERVICES.length} canonical services in place; ${toDelete.length} removed.`);
+  console.log("Verify in Studio, or run: npx tsx scripts/list-services.ts");
 }
 
 main().catch((err) => {

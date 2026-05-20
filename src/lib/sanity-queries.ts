@@ -161,7 +161,7 @@ export async function getNavItems(
 
 export async function getAllServices(): Promise<Service[]> {
   return sanity.fetch<Service[]>(
-    groq`*[_type == "service" && isActive != false] | order(order asc) { _id, title, slug, tagline, description, heroImage, order, isActive }`,
+    groq`*[_type == "service" && isActive != false] | order(order asc) { _id, title, slug, tagline, description, durationMinutes, priceCents, heroImage, order, isActive }`,
     {},
     { next: { revalidate: REVALIDATE_SECONDS } },
   );

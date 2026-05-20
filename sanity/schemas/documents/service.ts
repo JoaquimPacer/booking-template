@@ -43,6 +43,14 @@ export const service = defineType({
       validation: (r) => r.positive().integer(),
     }),
     defineField({
+      name: "bufferMinutes",
+      title: "Cleanup time after (minutes)",
+      type: "number",
+      description: "Extra time reserved after this session before the next booking can start (cleanup, notes, reset). Leave blank or 0 for none. Example: 15.",
+      initialValue: 0,
+      validation: (r) => r.min(0).integer(),
+    }),
+    defineField({
       name: "description",
       title: "Short description",
       type: "text",

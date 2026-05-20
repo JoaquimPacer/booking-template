@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# local Sanity/DB backup snapshots (safety artifacts, not source)
+/backups
+
 # next.js
 /.next/
 /out/
