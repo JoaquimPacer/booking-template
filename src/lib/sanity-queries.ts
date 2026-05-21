@@ -12,7 +12,7 @@ import { REVALIDATE_SECONDS } from "./cache";
 export type Cta = {
   label?: string;
   href?: string;
-  style?: "primary" | "secondary" | "ghost";
+  style?: "primary" | "secondary" | "ghost" | "hidden";
 };
 
 export type SiteSettings = {

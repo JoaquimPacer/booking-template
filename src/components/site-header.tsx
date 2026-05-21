@@ -28,6 +28,8 @@ export async function SiteHeader() {
   const siteName = siteSettings?.name ?? "Booking Template";
   const headerCtaLabel = siteSettings?.headerCta?.label ?? "Book now";
   const headerCtaHref = siteSettings?.headerCta?.href ?? "/services";
+  // Respect the "Hidden" style so the Book Now button can be removed from Sanity.
+  const showHeaderCta = siteSettings?.headerCta?.style !== "hidden";
   const headerCtaVariant =
     siteSettings?.headerCta?.style === "ghost"
       ? ("ghost" as const)
@@ -64,9 +66,11 @@ export async function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <Link href={headerCtaHref} className={buttonVariants({ variant: headerCtaVariant })}>
-            {headerCtaLabel}
-          </Link>
+          {showHeaderCta && (
+            <Link href={headerCtaHref} className={buttonVariants({ variant: headerCtaVariant })}>
+              {headerCtaLabel}
+            </Link>
+          )}
         </nav>
 
         {/* Mobile menu */}
@@ -90,9 +94,11 @@ export async function SiteHeader() {
                   {item.label}
                 </Link>
               ))}
-              <Link href={headerCtaHref} className={`${buttonVariants({ variant: headerCtaVariant })} mt-2`}>
-                {headerCtaLabel}
-              </Link>
+              {showHeaderCta && (
+                <Link href={headerCtaHref} className={`${buttonVariants({ variant: headerCtaVariant })} mt-2`}>
+                  {headerCtaLabel}
+                </Link>
+              )}
             </nav>
           </SheetContent>
         </Sheet>
