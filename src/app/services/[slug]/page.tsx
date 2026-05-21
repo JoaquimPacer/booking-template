@@ -67,50 +67,69 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
           { name: service.title, path: `/services/${service.slug.current}` },
         ])}
       />
-      {heroUrl && (
-        <div className="relative h-[40vh] min-h-[300px] w-full overflow-hidden">
+      {/* Header banner: the service photo if one is set, otherwise an on-brand
+          gradient so the page never looks blank. Title + meta sit on top. */}
+      <header className="relative isolate flex min-h-[280px] items-end overflow-hidden md:min-h-[360px]">
+        {heroUrl ? (
           <Image
             src={heroUrl}
             alt={service.title}
             fill
-            sizes="100vw"
             priority
-            className="object-cover"
+            sizes="100vw"
+            className="absolute inset-0 -z-10 object-cover"
           />
+        ) : (
+          <div
+            className="absolute inset-0 -z-10"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, var(--brand-primary, #0f172a), var(--brand-secondary, #475569))",
+            }}
+          />
+        )}
+        <div className="absolute inset-0 -z-10 bg-black/40" aria-hidden="true" />
+        <div className="container mx-auto max-w-3xl px-4 pb-10 pt-24 text-background">
+          <Link
+            href="/services"
+            className="text-sm text-background/80 hover:text-background"
+          >
+            &larr; All services
+          </Link>
+          <h1
+            className="mt-3 text-4xl font-bold tracking-tight md:text-5xl"
+            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+          >
+            {service.title}
+          </h1>
+          {service.tagline && (
+            <p
+              className="mt-3 max-w-2xl text-lg text-background/90"
+              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}
+            >
+              {service.tagline}
+            </p>
+          )}
+          {(service.durationMinutes || service.priceCents) && (
+            <div className="mt-4 flex items-center gap-6">
+              {service.durationMinutes && (
+                <span className="inline-flex items-center gap-2 text-background/90">
+                  <Clock className="size-4" aria-hidden="true" />
+                  {formatDurationMinutes(service.durationMinutes)}
+                </span>
+              )}
+              {service.priceCents && (
+                <span className="text-xl font-semibold">
+                  {formatPriceCents(service.priceCents)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </header>
 
-      <div className="container mx-auto max-w-3xl px-4 pt-12">
-        <Link
-          href="/services"
-          className="text-sm text-foreground/60 hover:text-foreground"
-        >
-          &larr; All services
-        </Link>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
-          {service.title}
-        </h1>
-        {service.tagline && (
-          <p className="mt-4 text-lg text-foreground/70">{service.tagline}</p>
-        )}
-
-        {(service.durationMinutes || service.priceCents) && (
-          <div className="mt-6 flex items-center gap-6 text-base">
-            {service.durationMinutes && (
-              <span className="inline-flex items-center gap-2 text-foreground/80">
-                <Clock className="size-4" aria-hidden="true" />
-                {formatDurationMinutes(service.durationMinutes)}
-              </span>
-            )}
-            {service.priceCents && (
-              <span className="text-xl font-semibold">
-                {formatPriceCents(service.priceCents)}
-              </span>
-            )}
-          </div>
-        )}
-
-        <div className="mt-8">
+      <div className="container mx-auto max-w-3xl px-4 pt-10">
+        <div>
           <Link
             href={`/book/${service.slug.current}`}
             className={`${buttonVariants({ size: "lg" })} px-8`}
@@ -156,14 +175,17 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
           </div>
         )}
 
-        <div className="mt-16 border-t border-border pt-8 text-center">
-          <Link
-            href={`/book/${service.slug.current}`}
-            className={`${buttonVariants({ size: "lg" })} px-8`}
-          >
-            Book this service
-          </Link>
-        </div>
+        {/* Second CTA only on content-rich pages, where scrolling back up is a chore. */}
+        {Boolean(service.body) && (
+          <div className="mt-16 border-t border-border pt-8 text-center">
+            <Link
+              href={`/book/${service.slug.current}`}
+              className={`${buttonVariants({ size: "lg" })} px-8`}
+            >
+              Book this service
+            </Link>
+          </div>
+        )}
       </div>
     </article>
   );

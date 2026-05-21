@@ -175,6 +175,175 @@ const SERVICES: ManagedService[] = [
 
 const docId = (slug: string) => `service-${slug}`;
 
+// ---------------------------------------------------------------------------
+// Longer page content: full description (body) + "what to expect" list.
+// Written in Theresa's voice as a starting point. Applied with setIfMissing,
+// so anything edited in Studio is preserved on re-runs.
+// ---------------------------------------------------------------------------
+type LongContent = { body: string[]; expect: string[] };
+
+const oncology: LongContent = {
+  body: [
+    "Oncology massage is gentle, fully customized bodywork for anyone in active cancer treatment or living with a history of cancer. Theresa adjusts pressure, positioning, and technique to exactly where you are, so every session stays safe and supportive.",
+    "Clients come to ease pain and tension, lower stress and anxiety, settle nausea, and feel genuinely cared for during a hard stretch.",
+  ],
+  expect: [
+    "A short check-in about your treatment and how you feel that day",
+    "Light, comfortable pressure with careful positioning and extra cushioning as needed",
+    "A calm, unhurried session at your pace",
+    "Simple aftercare suggestions to use at home",
+  ],
+};
+
+const swedish: LongContent = {
+  body: [
+    "Swedish massage is the classic, full-body relaxation massage: long flowing strokes, gentle kneading, and steady pressure that ease muscle tension and improve circulation.",
+    "It is a perfect starting point if you are new to bodywork, or simply want to unwind, reduce stress, and feel restored.",
+  ],
+  expect: [
+    "A relaxing, full-body session at a pressure you choose",
+    "Long, soothing strokes that release everyday tension",
+    "Improved circulation and a calmer mind",
+    "A comfortable, private, unhurried space",
+  ],
+};
+
+const CONTENT: Record<string, LongContent> = {
+  "oncology-massage-60": oncology,
+  "oncology-massage-90": oncology,
+  "swedish-massage-60": swedish,
+  "swedish-massage-90": swedish,
+  "manual-lymphatic-drainage": {
+    body: [
+      "Manual Lymphatic Drainage is a light, rhythmic technique that helps your lymphatic system move fluid, calm swelling, and support your immune system. The touch is much gentler than a typical massage.",
+      "It is especially helpful after surgery or lymph node removal, and for anyone managing swelling, inflammation, or recovery. Theresa is a certified manual lymphatic drainage therapist (CMLDT).",
+    ],
+    expect: [
+      "Very light, slow, repetitive strokes that follow your lymph pathways",
+      "A focus on reducing swelling and supporting healing",
+      "Comfortable positioning throughout",
+      "Guidance on simple at-home techniques between visits",
+    ],
+  },
+  "craniosacral-therapy": {
+    body: [
+      "Craniosacral therapy uses an extremely light touch, about the weight of a nickel, to release deep tension in the head, spine, and sacrum and help the nervous system settle.",
+      "Because it is so gentle, it suits people who find regular massage too intense. Clients often use it for chronic pain, headaches, insomnia, and a general sense of overwhelm.",
+    ],
+    expect: [
+      "Gentle, still holds rather than kneading or deep pressure",
+      "You stay fully clothed and comfortable",
+      "A deeply relaxing, quiet session",
+      "Many people feel calmer and sleep better afterward",
+    ],
+  },
+  "structural-bodywork": {
+    body: [
+      "Structural bodywork looks at how you stand and move, then uses focused massage techniques to improve your posture, mobility, and alignment.",
+      "Instead of only chasing the spot that hurts, Theresa works to address the root cause, so relief lasts longer and movement feels easier.",
+    ],
+    expect: [
+      "A brief posture and movement assessment",
+      "Targeted work on the patterns behind your pain or stiffness",
+      "More freedom of movement and better alignment over a series of sessions",
+      "Tips to support the changes between visits",
+    ],
+  },
+  reiki: {
+    body: [
+      "Reiki is a gentle, hands-on (or hands-just-above) energy practice meant to support your body's own ability to relax and heal.",
+      "Many clients use it alongside regular medical care for stress relief, better sleep, and a real sense of calm. You stay fully clothed throughout.",
+    ],
+    expect: [
+      "A quiet, restful session while you lie comfortably",
+      "Light resting touch, or hands held just above the body",
+      "A focus on relaxation and balance",
+      "Many people leave feeling settled and refreshed",
+    ],
+  },
+  "pregnancy-massage": {
+    body: [
+      "Pregnancy massage is tailored to the changing needs of the mother-to-be, with safe positioning and gentle techniques that support your body through each trimester.",
+      "It can ease back and hip discomfort, reduce swelling, and give you a calm, restful break.",
+    ],
+    expect: [
+      "Safe, supported positioning with plenty of cushioning",
+      "Gentle techniques chosen for where you are in pregnancy",
+      "Relief for common aches, tension, and swelling",
+      "A peaceful chance to rest and reconnect",
+    ],
+  },
+  "pediatric-massage": {
+    body: [
+      "Pediatric massage is skilled, nurturing touch for infants and children, from newborns up to about 12 years old.",
+      "It can help with sleep, digestion, growing pains, tension headaches, and the comfort of children with medical or sensory needs. Theresa brings decades of pediatric nursing experience to this work.",
+    ],
+    expect: [
+      "Gentle, age-appropriate touch with a parent present",
+      "A calm, friendly pace that follows the child's comfort",
+      "Support for sleep, digestion, and everyday discomforts",
+      "Simple techniques families can continue at home",
+    ],
+  },
+  "neuropathy-massage": {
+    body: [
+      "This single session focuses on easing the symptoms of peripheral neuropathy by improving circulation to the feet and hands and supporting nerve health.",
+      "Theresa combines targeted massage with heat lamp application, and sends you home with a daily self-massage and exercise program to keep the progress going.",
+    ],
+    expect: [
+      "Focused work on the feet and/or hands",
+      "Heat lamp application to support circulation and nerve healing",
+      "A calm, comfortable session",
+      "A simple daily home program to continue between visits",
+    ],
+  },
+  "neuropathy-no-more": {
+    body: [
+      "Neuropathy No More is a four-session program built to relieve the pain and discomfort of peripheral neuropathy over time. Each weekly session focuses on improving circulation to the feet and hands and supporting nerve healing.",
+      "The program pairs hands-on massage and heat lamp work with a daily self-massage routine you do at home, so the four sessions build on each other. To get started, reach out and Theresa will plan the schedule with you.",
+    ],
+    expect: [
+      "Four weekly sessions designed to build on each other",
+      "Focused massage on the feet and/or hands with heat lamp application",
+      "A daily at-home self-massage and exercise program",
+      "A plan tailored to your symptoms and schedule",
+    ],
+  },
+};
+
+// Build Sanity portable-text blocks from plain strings.
+type PtBlock = {
+  _type: "block";
+  _key: string;
+  style: "normal";
+  markDefs: never[];
+  listItem?: "bullet";
+  level?: number;
+  children: { _type: "span"; _key: string; text: string; marks: never[] }[];
+};
+
+function toParagraphs(paragraphs: string[]): PtBlock[] {
+  return paragraphs.map((text, i) => ({
+    _type: "block",
+    _key: `body${i}`,
+    style: "normal",
+    markDefs: [],
+    children: [{ _type: "span", _key: `body${i}s`, text, marks: [] }],
+  }));
+}
+
+function toBullets(items: string[]): PtBlock[] {
+  return items.map((text, i) => ({
+    _type: "block",
+    _key: `exp${i}`,
+    style: "normal",
+    listItem: "bullet",
+    level: 1,
+    markDefs: [],
+    children: [{ _type: "span", _key: `exp${i}s`, text, marks: [] }],
+  }));
+}
+
 interface ServiceDoc {
   _id: string;
   title?: string;
@@ -243,11 +412,19 @@ async function main() {
       bookingMode: s.bookingMode ?? "slots",
       order: s.order,
     };
+    const content = CONTENT[s.slug];
+    const longFields: { body?: PtBlock[]; whatToExpect?: PtBlock[] } = content
+      ? { body: toParagraphs(content.body), whatToExpect: toBullets(content.expect) }
+      : {};
     if (existingById.has(id)) {
-      await sanityWrite.patch(id).set(managed).commit();
+      // set() overwrites the managed fields; setIfMissing() fills body +
+      // whatToExpect only when empty, preserving anything edited in Studio.
+      const patch = sanityWrite.patch(id).set(managed);
+      if (content) patch.setIfMissing(longFields);
+      await patch.commit();
       console.log(`Patched ${id}`);
     } else {
-      await sanityWrite.create({ _id: id, _type: "service", isActive: true, ...managed });
+      await sanityWrite.create({ _id: id, _type: "service", isActive: true, ...managed, ...longFields });
       console.log(`Created ${id}`);
     }
   }

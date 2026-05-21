@@ -24,13 +24,15 @@ import { groq } from "next-sanity";
 const STUDIO_SLUG = "theresa-attea";
 const STUDIO_TIMEZONE = "America/Chicago"; // Austin, TX
 
-// dayOfWeek: 0 = Sunday ... 6 = Saturday. PLACEHOLDER hours.
+// dayOfWeek: 0 = Sunday ... 6 = Saturday.
+// These mirror the hours already shown in her site footer (from her Google
+// listing). Confirm with Theresa, then edit here (or in /admin once it ships).
 const WEEKLY_HOURS = [
-  { dayOfWeek: 2, startTime: "09:00", endTime: "17:00" }, // Tue
-  { dayOfWeek: 3, startTime: "09:00", endTime: "17:00" }, // Wed
-  { dayOfWeek: 4, startTime: "09:00", endTime: "17:00" }, // Thu
-  { dayOfWeek: 5, startTime: "09:00", endTime: "17:00" }, // Fri
-  { dayOfWeek: 6, startTime: "09:00", endTime: "15:00" }, // Sat
+  { dayOfWeek: 2, startTime: "12:00", endTime: "17:00" }, // Tue
+  { dayOfWeek: 3, startTime: "10:00", endTime: "17:00" }, // Wed
+  { dayOfWeek: 4, startTime: "12:00", endTime: "17:00" }, // Thu
+  { dayOfWeek: 5, startTime: "09:00", endTime: "16:00" }, // Fri
+  // Mon, Sat, Sun: closed
 ];
 
 interface SanityService {
