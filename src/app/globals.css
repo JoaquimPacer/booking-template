@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Adds the `prose` utility classes (paragraph spacing, lists with bullets,
+   headings, etc.) used on service detail body + What-to-expect content. */
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

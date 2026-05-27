@@ -175,17 +175,6 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
           </div>
         )}
 
-        {/* Second CTA only on content-rich pages, where scrolling back up is a chore. */}
-        {Boolean(service.body) && (
-          <div className="mt-16 border-t border-border pt-8 text-center">
-            <Link
-              href={`/book/${service.slug.current}`}
-              className={`${buttonVariants({ size: "lg" })} px-8`}
-            >
-              Book this service
-            </Link>
-          </div>
-        )}
       </div>
     </article>
   );
