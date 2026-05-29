@@ -64,8 +64,8 @@ export default async function HomePage() {
 
       {/* About preview section */}
       {(siteSettings?.homeIntroHeading || siteSettings?.homeIntroBody || primaryInstructor) && (
-        <section className="container mx-auto px-4 py-20">
-          <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
+        <section className="container mx-auto px-4 py-16 md:py-24">
+          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-12">
             {primaryInstructor?.photo && (
               <div className="order-1 md:order-2">
                 <Image
@@ -108,7 +108,8 @@ export default async function HomePage() {
 
       {/* Services section */}
       {services.length > 0 && (
-        <section className="container mx-auto px-4 py-20">
+        <section className="bg-muted/40 py-16 md:py-24">
+          <div className="container mx-auto px-4">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Our services
@@ -129,6 +130,7 @@ export default async function HomePage() {
               </Link>
             </div>
           )}
+          </div>
         </section>
       )}
 
@@ -139,7 +141,7 @@ export default async function HomePage() {
 
       {/* Testimonials section */}
       {testimonials.length > 0 && (
-        <section className="border-t border-border py-20">
+        <section className="border-t border-border py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
@@ -159,7 +161,7 @@ export default async function HomePage() {
       )}
 
       {/* Final CTA */}
-      <section className="border-t border-border py-20">
+      <section className="bg-muted/40 py-16 md:py-24">
         <div className="container mx-auto max-w-2xl px-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             Ready to book?
