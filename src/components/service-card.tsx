@@ -1,15 +1,14 @@
-// Service card. The WHOLE card is clickable (navigates to the service detail
-// page) via a stretched link. The Book button sits on top (higher z-index)
-// and navigates to booking instead. Avoids invalid nested <a> tags.
+// Service card. The WHOLE card is one big clickable target (navigates to the
+// service detail page, which has the prominent "Book this service" button).
+// No small per-card button: the whole card is the affordance.
 //
-// Shows: optional photo, title, tagline, duration, price, and a Book button.
-// Photo/duration/price appear only when set in Sanity.
+// Shows: optional photo, title, tagline, duration, price. Photo/duration/price
+// appear only when set in Sanity.
 
 import Image from "next/image";
 import Link from "next/link";
 import { Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
 import { urlFor } from "@/lib/sanity-image";
 import { formatDurationMinutes, formatPriceCents } from "@/lib/format";
 import type { Service } from "@/lib/sanity-queries";
@@ -65,17 +64,10 @@ export function ServiceCard({ service }: ServiceCardProps) {
           </div>
         )}
       </CardHeader>
-      <CardContent className="mt-auto flex items-center justify-between pt-4">
-        <span className="text-sm font-medium text-foreground/60 transition-colors group-hover:text-foreground">
-          Learn more &rarr;
+      <CardContent className="mt-auto pt-4">
+        <span className="text-sm font-semibold text-primary transition-all group-hover:gap-2">
+          View details &amp; book &rarr;
         </span>
-        {/* Book button: raised above the stretched link so it's independently clickable. */}
-        <Link
-          href={`/book/${service.slug.current}`}
-          className={`relative z-10 ${buttonVariants({ size: "sm" })}`}
-        >
-          Book
-        </Link>
       </CardContent>
     </Card>
   );
