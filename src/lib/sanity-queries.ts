@@ -13,6 +13,8 @@ export type Cta = {
   label?: string;
   href?: string;
   style?: "primary" | "secondary" | "ghost" | "hidden";
+  size?: "small" | "normal" | "large" | "xlarge";
+  align?: "left" | "center" | "right";
 };
 
 export type SiteSettings = {

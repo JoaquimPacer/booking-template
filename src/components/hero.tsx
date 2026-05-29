@@ -7,6 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { urlFor } from "@/lib/sanity-image";
+import { cn } from "@/lib/utils";
+import { ctaSizeClasses, ctaAlignClass, type CtaSize, type CtaAlign } from "@/lib/cta";
 import type { SanityImage } from "@/lib/sanity-queries";
 
 interface HeroProps {
@@ -15,6 +17,8 @@ interface HeroProps {
   ctaLabel?: string;
   ctaHref?: string;
   ctaStyle?: "primary" | "secondary" | "ghost" | "hidden" | string;
+  ctaSize?: CtaSize;
+  ctaAlign?: CtaAlign;
   image?: SanityImage | null;
   videoUrl?: string | null;
   overlayOpacity?: number | null;
@@ -32,6 +36,8 @@ export function Hero({
   ctaLabel = "Book now",
   ctaHref = "/services",
   ctaStyle,
+  ctaSize,
+  ctaAlign,
   image,
   videoUrl,
   overlayOpacity,
@@ -95,12 +101,15 @@ export function Hero({
           </p>
         )}
         {showCta && (
-          <div className="mt-10 flex justify-center">
+          <div className={cn("mt-10 flex", ctaAlignClass(ctaAlign))}>
             <Link
               href={ctaHref}
-              className={`${buttonVariants({ size: "lg", variant })} px-8 text-base ${
-                variant === "outline" ? "border-2 border-background bg-transparent text-background hover:bg-background/10" : ""
-              }`}
+              className={cn(
+                buttonVariants({ variant }),
+                ctaSizeClasses(ctaSize),
+                variant === "outline" &&
+                  "border-2 border-background bg-transparent text-background hover:bg-background/10",
+              )}
             >
               {ctaLabel}
             </Link>

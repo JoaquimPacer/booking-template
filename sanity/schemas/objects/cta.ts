@@ -34,5 +34,37 @@ export const cta = defineType({
       },
       initialValue: "primary",
     }),
+    defineField({
+      name: "size",
+      title: "Button size",
+      type: "string",
+      description: "How big the button is. Larger sizes stand out more.",
+      options: {
+        list: [
+          { title: "Small", value: "small" },
+          { title: "Normal", value: "normal" },
+          { title: "Large", value: "large" },
+          { title: "Extra large", value: "xlarge" },
+        ],
+        layout: "radio",
+      },
+      initialValue: "normal",
+    }),
+    defineField({
+      name: "align",
+      title: "Button position",
+      type: "string",
+      description:
+        "Left, center, or right. Applies on the home hero. (In the top menu bar the button always sits on the right.)",
+      options: {
+        list: [
+          { title: "Left", value: "left" },
+          { title: "Center", value: "center" },
+          { title: "Right", value: "right" },
+        ],
+        layout: "radio",
+      },
+      initialValue: "center",
+    }),
   ],
 });

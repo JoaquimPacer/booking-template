@@ -13,6 +13,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { urlFor } from "@/lib/sanity-image";
+import { cn } from "@/lib/utils";
+import { ctaSizeClasses } from "@/lib/cta";
 import { getNavItems, getSiteSettings } from "@/lib/sanity-queries";
 
 export async function SiteHeader() {
@@ -30,6 +32,7 @@ export async function SiteHeader() {
   const headerCtaHref = siteSettings?.headerCta?.href ?? "/services";
   // Respect the "Hidden" style so the Book Now button can be removed from Sanity.
   const showHeaderCta = siteSettings?.headerCta?.style !== "hidden";
+  const headerCtaSize = siteSettings?.headerCta?.size;
   const headerCtaVariant =
     siteSettings?.headerCta?.style === "ghost"
       ? ("ghost" as const)
@@ -67,7 +70,10 @@ export async function SiteHeader() {
             </Link>
           ))}
           {showHeaderCta && (
-            <Link href={headerCtaHref} className={buttonVariants({ variant: headerCtaVariant })}>
+            <Link
+              href={headerCtaHref}
+              className={cn(buttonVariants({ variant: headerCtaVariant }), ctaSizeClasses(headerCtaSize))}
+            >
               {headerCtaLabel}
             </Link>
           )}
@@ -95,7 +101,10 @@ export async function SiteHeader() {
                 </Link>
               ))}
               {showHeaderCta && (
-                <Link href={headerCtaHref} className={`${buttonVariants({ variant: headerCtaVariant })} mt-2`}>
+                <Link
+                  href={headerCtaHref}
+                  className={cn(buttonVariants({ variant: headerCtaVariant }), ctaSizeClasses(headerCtaSize), "mt-2")}
+                >
                   {headerCtaLabel}
                 </Link>
               )}
