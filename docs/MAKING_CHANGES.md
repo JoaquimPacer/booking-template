@@ -47,6 +47,41 @@ Only **code** has a local-vs-production split. `npm run dev` runs *your local co
 the code* on your computer, while reading the same live content + data. Production
 runs *the code that's been pushed and built*.
 
+## "But how does a Sanity edit show up on the Vercel site without a push?"
+
+This is the part that trips people up. **Vercel does two jobs, not one:**
+
+1. It **builds and hosts your app** (the code). This only changes on `git push`.
+2. It **runs that app for every visitor**, and the running app **fetches content from
+   Sanity and data from Neon live**, on each request (refreshed every ~10s).
+
+So when you Publish in Sanity, you do NOT trigger a Vercel build. But the app already
+running on Vercel pulls the new content the next time someone visits, and it appears,
+no push required.
+
+Think of the production site as a **digital menu board at a restaurant**:
+- The **board itself** (layout, how things are arranged) = your **code**. Changing it
+  means installing a new board → that's `git push` → a Vercel build.
+- The **prices and items shown** = **content/data** from Sanity/Neon. The manager
+  edits a price in back (Publish / `--apply`) and the board updates in seconds, with
+  **no new board installed**.
+
+Precise version:
+- A **new Vercel deployment** (new code live) happens **only on `git push`**.
+- What the live site **displays** changes on `git push` (code) **and** on
+  Publish/`--apply` (content/data) — the latter two with no rebuild, because the
+  running app reads Sanity + Neon on every request.
+- `npm run dev` touches Vercel **never**; it's purely your local machine.
+
+## Front-end vs back-end views (both come from one `npm run dev`)
+
+`npm run dev` serves everything at `localhost:3000`. The URL decides what you see:
+- `localhost:3000` → the **front-end** (the public website).
+- `localhost:3000/studio` → the **content back-end** (Sanity Studio, where you edit text/photos).
+- `localhost:3000/admin` → the **operations back-end** (bookings, schedule). *Not built yet — Phase 3.*
+
+So you don't switch servers to see front vs back; you just change the URL.
+
 ## Why the Studio says "Booking Template" and Sanity says "no studios deployed"
 
 Two things that look wrong but aren't:
