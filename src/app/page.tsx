@@ -58,7 +58,7 @@ export default async function HomePage() {
         ctaSize={siteSettings?.heroCta?.size}
         ctaAlign={siteSettings?.heroCta?.align}
         image={siteSettings?.homeHero ?? null}
-        videoUrl={siteSettings?.homeHeroVideoUrl ?? null}
+        videoUrl={siteSettings?.heroVideoFileUrl ?? siteSettings?.homeHeroVideoUrl ?? null}
         overlayOpacity={siteSettings?.homeHeroOverlayOpacity ?? null}
       />
 

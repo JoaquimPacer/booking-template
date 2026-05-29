@@ -1,95 +1,141 @@
 import { defineField, defineType } from "sanity";
 
-// Site-wide singleton. One document per deploy. Holds the business name,
-// brand theme, contact info, social links, and default SEO fallbacks.
+// Site-wide singleton. One document per deploy. Organized into TABS (groups) so
+// the editing experience maps to the site top-to-bottom instead of one long
+// scroll: Business info, Look & feel, Top bar, Homepage, Contact & footer, SEO.
+// Each button (header / hero) lives in the tab for the part of the site it
+// appears in, so you never have to hunt for it.
 export const siteSettings = defineType({
   name: "siteSettings",
   title: "Site Settings",
   type: "document",
+  groups: [
+    { name: "business", title: "Business info", default: true },
+    { name: "branding", title: "Look & feel" },
+    { name: "topbar", title: "Top bar" },
+    { name: "homepage", title: "Homepage" },
+    { name: "contact", title: "Contact & footer" },
+    { name: "seo", title: "SEO / Google" },
+  ],
   fields: [
+    // ---- Business info ----
     defineField({
       name: "name",
       title: "Business name",
       type: "string",
       description: "Shown in the header and footer.",
+      group: "business",
       validation: (r) => r.required(),
     }),
     defineField({
       name: "tagline",
       title: "Tagline",
       type: "string",
-      description: "Short one-line description shown in hero and meta tags.",
+      description: "Short one-line phrase. Shown as the big headline on the homepage hero.",
+      group: "business",
     }),
     defineField({
       name: "description",
       title: "Description",
       type: "text",
       rows: 3,
-      description: "Longer description used in About section and SEO fallback.",
+      description: "One or two sentences. Shown under the hero headline and used as a fallback for Google.",
+      group: "business",
     }),
+
+    // ---- Look & feel ----
     defineField({
       name: "brand",
-      title: "Brand theme (colors, fonts, logos)",
+      title: "Colors, fonts, logo",
       type: "brand",
+      group: "branding",
     }),
+
+    // ---- Top bar (header) ----
+    defineField({
+      name: "headerCta",
+      title: "Top-bar button",
+      type: "cta",
+      description:
+        "The button in the top-right of every page. The menu links beside it are managed separately under 'Navigation' in the left sidebar.",
+      group: "topbar",
+    }),
+
+    // ---- Homepage (top-to-bottom: hero, then intro, then gallery) ----
     defineField({
       name: "homeHero",
-      title: "Home page hero background image",
+      title: "Hero background image",
       type: "image",
-      description: "Large image behind the hero text. Used when no video URL is set. Recommend 1920x1080 or larger, landscape orientation. If neither image nor video is set, a brand-color gradient is used instead.",
+      description:
+        "Large image behind the hero text. Used when no video is set. Recommend 1920x1080+ landscape. If neither image nor video is set, a brand-color gradient shows instead.",
       options: { hotspot: true },
+      group: "homepage",
+    }),
+    defineField({
+      name: "homeHeroVideo",
+      title: "Hero background video (upload)",
+      type: "file",
+      options: { accept: "video/mp4,video/webm" },
+      description:
+        "Upload a short looping clip (10-30s, no sound). Plays behind the hero text and takes priority over the image. MP4 recommended, keep it under ~15 MB so the page loads fast.",
+      group: "homepage",
     }),
     defineField({
       name: "homeHeroVideoUrl",
-      title: "Home page hero background video URL",
+      title: "Hero video from a link (advanced)",
       type: "url",
-      description: "Optional. When set, plays as a looping background video INSTEAD of the image. Use a short clip (10-30s), no audio, looping-friendly composition. Recommend hosting on Vercel Blob or any CDN.",
+      description:
+        "Only needed if you are NOT uploading a video above. Paste a hosted video URL. Most people should use the upload field instead.",
+      group: "homepage",
     }),
     defineField({
       name: "homeHeroOverlayOpacity",
-      title: "Home page hero overlay darkness (0-80)",
+      title: "Hero overlay darkness (0-80)",
       type: "number",
-      description: "Strength of the dark overlay on top of the hero image/video, as a percentage. Higher = darker (better text legibility). Lower = brighter (video shows through more). Default 35.",
+      description:
+        "Darkness of the shade over the hero image/video, as a percentage. Higher = darker (easier to read the text). Lower = brighter. Default 35.",
       initialValue: 35,
       validation: (r) => r.min(0).max(80),
-    }),
-    defineField({
-      name: "homeIntroHeading",
-      title: "Home page intro heading",
-      type: "string",
-      description: "Optional heading shown above the about-preview section on the home page (e.g. 'Welcome' or 'About').",
-    }),
-    defineField({
-      name: "homeIntroBody",
-      title: "Home page intro body",
-      type: "text",
-      rows: 4,
-      description: "Optional paragraph shown below the intro heading.",
-    }),
-    defineField({
-      name: "homeGallery",
-      title: "Home page gallery images",
-      type: "array",
-      of: [{ type: "image", options: { hotspot: true } }],
-      description: "Optional. 3-6 images shown in a grid on the homepage. Use for showing the space, atmosphere, or before/after.",
-      validation: (r) => r.max(8),
-    }),
-    defineField({
-      name: "headerCta",
-      title: "Header button",
-      type: "cta",
-      description: "The primary button in the top navigation bar. Defaults to 'Book now' -> /services if not set.",
+      group: "homepage",
     }),
     defineField({
       name: "heroCta",
-      title: "Homepage hero button",
+      title: "Hero button",
       type: "cta",
-      description: "The primary button in the homepage hero section. Defaults to 'Book now' -> /services if not set.",
+      description: "The big button over the homepage hero image/video.",
+      group: "homepage",
     }),
+    defineField({
+      name: "homeIntroHeading",
+      title: "Intro heading",
+      type: "string",
+      description: "Optional heading for the 'about' section below the hero (e.g. 'Welcome').",
+      group: "homepage",
+    }),
+    defineField({
+      name: "homeIntroBody",
+      title: "Intro paragraph",
+      type: "text",
+      rows: 4,
+      description: "Optional paragraph shown under the intro heading.",
+      group: "homepage",
+    }),
+    defineField({
+      name: "homeGallery",
+      title: "Gallery images",
+      type: "array",
+      of: [{ type: "image", options: { hotspot: true } }],
+      description: "Optional. 3-6 images shown in a grid on the homepage (the space, atmosphere, etc.).",
+      validation: (r) => r.max(8),
+      group: "homepage",
+    }),
+
+    // ---- Contact & footer ----
     defineField({
       name: "contact",
       title: "Contact information",
       type: "object",
+      group: "contact",
       fields: [
         defineField({ name: "phone", type: "string" }),
         defineField({ name: "email", type: "string", validation: (r) => r.email() }),
@@ -105,7 +151,7 @@ export const siteSettings = defineType({
           name: "googlePlaceId",
           title: "Google Place ID",
           type: "string",
-          description: "Used by Phase 1.5 replicate script + future reviews display.",
+          description: "Used by the replicate script + future reviews display. You usually won't touch this.",
         }),
       ],
     }),
@@ -113,6 +159,7 @@ export const siteSettings = defineType({
       name: "social",
       title: "Social links",
       type: "object",
+      group: "contact",
       fields: [
         defineField({ name: "instagram", type: "url" }),
         defineField({ name: "facebook", type: "url" }),
@@ -126,11 +173,17 @@ export const siteSettings = defineType({
       type: "text",
       rows: 2,
       description: "Copyright line, disclaimers, etc.",
+      group: "contact",
     }),
+
+    // ---- SEO ----
     defineField({
       name: "defaultSeo",
-      title: "Default SEO (fallback for pages without explicit SEO)",
+      title: "Search engine defaults (optional)",
       type: "seo",
+      description:
+        "Optional. Leave blank and the site fills these in from your business name + tagline. Only set these to override what Google shows.",
+      group: "seo",
     }),
   ],
   preview: {

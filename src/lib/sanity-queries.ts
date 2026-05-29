@@ -36,6 +36,8 @@ export type SiteSettings = {
   };
   homeHero?: SanityImage;
   homeHeroVideoUrl?: string;
+  // Resolved download URL of an uploaded hero video file (see getSiteSettings).
+  heroVideoFileUrl?: string;
   homeHeroOverlayOpacity?: number;
   homeIntroHeading?: string;
   homeIntroBody?: string;
@@ -146,8 +148,10 @@ export type Page = {
 // ============================================================================
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
+  // The `...` spread returns every field; the alias resolves the uploaded hero
+  // video file (if any) to a playable URL so the Hero can prefer it over a pasted URL.
   return sanity.fetch<SiteSettings | null>(
-    groq`*[_type == "siteSettings"][0]`,
+    groq`*[_type == "siteSettings"][0]{ ..., "heroVideoFileUrl": homeHeroVideo.asset->url }`,
     {},
     { next: { revalidate: REVALIDATE_SECONDS } },
   );

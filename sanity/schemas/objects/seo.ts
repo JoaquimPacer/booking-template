@@ -12,7 +12,8 @@ export const seo = defineType({
       name: "metaTitle",
       title: "Meta title",
       type: "string",
-      description: "Shown in browser tab + Google search results. Aim ~50-60 chars.",
+      description:
+        "Optional. The title shown in the browser tab + as the blue link in Google results. Leave blank to auto-use your business name. Aim ~50-60 chars if you set it.",
       validation: (r) => r.max(60),
     }),
     defineField({
@@ -20,7 +21,8 @@ export const seo = defineType({
       title: "Meta description",
       type: "text",
       rows: 3,
-      description: "Shown under the title in Google search results. Aim ~150-160 chars.",
+      description:
+        "Optional. The grey summary line under the title in Google results. Leave blank to auto-use your tagline/description. Aim ~150-160 chars if you set it.",
       validation: (r) => r.max(160),
     }),
     defineField({

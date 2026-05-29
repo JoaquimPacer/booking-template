@@ -94,7 +94,7 @@ export function Hero({
         </h1>
         {subtitle && (
           <p
-            className="mx-auto mt-6 max-w-2xl text-balance text-lg text-background/90 md:text-xl"
+            className="mx-auto mt-6 max-w-2xl text-balance text-xl text-background/90 md:text-2xl"
             style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
           >
             {subtitle}

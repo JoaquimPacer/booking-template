@@ -14,9 +14,19 @@ export const cta = defineType({
     }),
     defineField({
       name: "href",
-      title: "Link target",
+      title: "Where the button goes",
       type: "string",
-      description: "Internal path (e.g. /book) or external URL.",
+      description: "Pick the page this button opens.",
+      options: {
+        list: [
+          { title: "Services (browse & book)", value: "/services" },
+          { title: "Contact", value: "/contact" },
+          { title: "About", value: "/about" },
+          { title: "FAQ", value: "/faq" },
+          { title: "Home", value: "/" },
+        ],
+      },
+      initialValue: "/services",
       validation: (r) => r.required(),
     }),
     defineField({
