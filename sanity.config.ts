@@ -9,7 +9,10 @@ import { structure } from "./sanity/structure";
 
 export default defineConfig({
   name: "default",
-  title: "Booking Template",
+  // Shown in the Studio's top-left. Set NEXT_PUBLIC_STUDIO_TITLE per client deploy
+  // (e.g. "Theresa Attea, LMT") so the editor sees the business name, not the
+  // generic template label. Falls back to "Booking Template" when unset.
+  title: process.env.NEXT_PUBLIC_STUDIO_TITLE ?? "Booking Template",
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ?? "placeholder",
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET ?? "production",
   basePath: "/studio",
