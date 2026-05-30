@@ -19,6 +19,7 @@ export const cta = defineType({
       description: "Pick the page this button opens.",
       options: {
         list: [
+          { title: "Online booking (your scheduler)", value: "__booking__" },
           { title: "Services (browse & book)", value: "/services" },
           { title: "Contact", value: "/contact" },
           { title: "About", value: "/about" },

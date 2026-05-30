@@ -9,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { urlFor } from "@/lib/sanity-image";
 import { cn } from "@/lib/utils";
 import { ctaSizeClasses, ctaAlignClass, type CtaSize, type CtaAlign } from "@/lib/cta";
+import { isExternalHref } from "@/lib/booking-link";
 import type { SanityImage } from "@/lib/sanity-queries";
 
 interface HeroProps {
@@ -104,6 +105,9 @@ export function Hero({
           <div className={cn("mt-10 flex", ctaAlignClass(ctaAlign))}>
             <Link
               href={ctaHref}
+              {...(isExternalHref(ctaHref)
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
               className={cn(
                 buttonVariants({ variant }),
                 ctaSizeClasses(ctaSize),

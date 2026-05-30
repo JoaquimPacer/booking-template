@@ -14,6 +14,7 @@ export const siteSettings = defineType({
     { name: "branding", title: "Look & feel" },
     { name: "topbar", title: "Top bar" },
     { name: "homepage", title: "Homepage" },
+    { name: "booking", title: "Booking" },
     { name: "contact", title: "Contact & footer" },
     { name: "seo", title: "SEO / Google" },
   ],
@@ -49,6 +50,16 @@ export const siteSettings = defineType({
       title: "Colors, fonts, logo",
       type: "brand",
       group: "branding",
+    }),
+
+    // ---- Booking ----
+    defineField({
+      name: "externalBookingUrl",
+      title: "External booking link (e.g. JaneApp)",
+      type: "url",
+      description:
+        "Optional. If you take bookings through an outside scheduler like JaneApp (which also handles payments and patient privacy), paste your booking page link here. When set, every 'Book' button on the site sends clients there in a new tab, and the built-in scheduler is skipped. Leave blank to use the built-in scheduler.",
+      group: "booking",
     }),
 
     // ---- Top bar (header) ----

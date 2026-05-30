@@ -14,6 +14,7 @@ import {
   getSiteSettings,
 } from "@/lib/sanity-queries";
 import { buildLocalBusinessJsonLd, buildPageMetadata } from "@/lib/seo";
+import { resolveCtaHref } from "@/lib/booking-link";
 
 // Next.js requires segment config to be a literal; keep in sync with REVALIDATE_SECONDS in src/lib/cache.ts.
 export const revalidate = 10;
@@ -43,7 +44,10 @@ export default async function HomePage() {
     siteSettings?.tagline ?? siteSettings?.name ?? "Welcome";
   const heroSubtitle = siteSettings?.description;
   const heroCtaLabel = siteSettings?.heroCta?.label ?? "Book now";
-  const heroCtaHref = siteSettings?.heroCta?.href ?? "/services";
+  const heroCtaHref = resolveCtaHref(
+    siteSettings?.heroCta?.href,
+    siteSettings?.externalBookingUrl,
+  );
 
   return (
     <>

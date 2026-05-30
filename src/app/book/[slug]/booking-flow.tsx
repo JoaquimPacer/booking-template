@@ -159,8 +159,16 @@ export function BookingFlow({ service, data }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="notes">Anything we should know? (optional)</Label>
-          <Textarea id="notes" rows={3} {...register("notes")} />
+          <Label htmlFor="notes">Scheduling notes (optional)</Label>
+          <Textarea
+            id="notes"
+            rows={3}
+            placeholder="Parking, accessibility, how you heard about us, etc. Please don't include any health or medical details here."
+            {...register("notes")}
+          />
+          <p className="text-xs text-foreground/50">
+            Please keep health details for your in-person intake, not this form.
+          </p>
         </div>
 
         {submitError && (

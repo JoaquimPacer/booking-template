@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Clock, Mail, Phone } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { formatDurationMinutes, formatPriceCents } from "@/lib/format";
@@ -35,8 +35,17 @@ export async function generateMetadata({ params }: BookPageProps) {
 
 export default async function BookPage({ params }: BookPageProps) {
   const { slug } = await params;
-  const service = await getServiceBySlug(slug);
+  const [service, settingsForBooking] = await Promise.all([
+    getServiceBySlug(slug),
+    getSiteSettings(),
+  ]);
   if (!service || service.isActive === false) notFound();
+
+  // If this client uses an external scheduler (e.g. JaneApp), bypass the
+  // built-in booking flow entirely and send them there.
+  if (settingsForBooking?.externalBookingUrl) {
+    redirect(settingsForBooking.externalBookingUrl);
+  }
 
   const mode = service.bookingMode ?? "slots";
   const duration = formatDurationMinutes(service.durationMinutes);

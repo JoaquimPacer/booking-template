@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/mobile-nav";
 import { urlFor } from "@/lib/sanity-image";
 import { cn } from "@/lib/utils";
 import { ctaSizeClasses } from "@/lib/cta";
+import { resolveCtaHref, isExternalHref } from "@/lib/booking-link";
 import { getNavItems, getSiteSettings } from "@/lib/sanity-queries";
 
 export async function SiteHeader() {
@@ -23,7 +24,11 @@ export async function SiteHeader() {
 
   const siteName = siteSettings?.name ?? "Booking Template";
   const headerCtaLabel = siteSettings?.headerCta?.label ?? "Book now";
-  const headerCtaHref = siteSettings?.headerCta?.href ?? "/services";
+  const headerCtaHref = resolveCtaHref(
+    siteSettings?.headerCta?.href,
+    siteSettings?.externalBookingUrl,
+  );
+  const headerCtaExternal = isExternalHref(headerCtaHref);
   // Respect the "Hidden" style so the Book Now button can be removed from Sanity.
   const showHeaderCta = siteSettings?.headerCta?.style !== "hidden";
   const headerCtaSize = siteSettings?.headerCta?.size;
@@ -70,6 +75,7 @@ export async function SiteHeader() {
         {showHeaderCta && (
           <Link
             href={headerCtaHref}
+            {...(headerCtaExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className={cn(
               "hidden shrink-0 md:inline-flex",
               buttonVariants({ variant: headerCtaVariant }),
@@ -89,6 +95,7 @@ export async function SiteHeader() {
             href: headerCtaHref,
             variant: headerCtaVariant,
             show: showHeaderCta,
+            external: headerCtaExternal,
           }}
         />
       </div>

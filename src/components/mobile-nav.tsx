@@ -26,6 +26,7 @@ interface MobileNavProps {
     href: string;
     variant: "default" | "outline" | "ghost";
     show: boolean;
+    external?: boolean;
   };
 }
 
@@ -63,6 +64,7 @@ export function MobileNav({ siteName, navItems, cta }: MobileNavProps) {
             <Link
               href={cta.href}
               onClick={close}
+              {...(cta.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className={cn(
                 buttonVariants({ variant: cta.variant }),
                 "mt-4 h-auto self-center px-8 py-2.5 text-base",
