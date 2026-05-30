@@ -18,8 +18,10 @@ export async function SiteHeader() {
     getNavItems("header"),
   ]);
 
+  // Request a tall, aspect-preserving source (crisp on retina at ~h-11 display).
+  // fit("max") never upscales or crops, so the logo keeps its own proportions.
   const logoUrl = siteSettings?.brand?.logo
-    ? urlFor(siteSettings.brand.logo)?.width(240).height(80).fit("max").url()
+    ? urlFor(siteSettings.brand.logo)?.height(128).fit("max").auto("format").url()
     : null;
 
   const siteName = siteSettings?.name ?? "Booking Template";
@@ -42,16 +44,17 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
-        {/* Left: logo / business name */}
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+        {/* Left: logo / business name. Height-capped, aspect preserved, width
+            capped so an unusually wide logo can't crowd the nav. */}
+        <Link href="/" className="flex shrink-0 items-center">
           {logoUrl ? (
             <Image
               src={logoUrl}
               alt={siteName}
-              width={200}
-              height={56}
+              width={220}
+              height={64}
               priority
-              className="h-12 w-auto object-contain"
+              className="h-9 w-auto max-w-[160px] object-contain md:h-11 md:max-w-[200px]"
             />
           ) : (
             <span className="text-lg font-semibold tracking-tight">{siteName}</span>
@@ -64,7 +67,7 @@ export async function SiteHeader() {
             <Link
               key={item._id}
               href={item.href}
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+              className="text-base font-medium text-foreground/75 transition-colors hover:text-foreground"
             >
               {item.label}
             </Link>

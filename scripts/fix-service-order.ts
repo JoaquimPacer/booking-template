@@ -22,7 +22,21 @@
 import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
-import { orderRankForIndex } from "../src/lib/order-rank";
+import { LexoRank } from "lexorank";
+import { generateOrderRanks } from "../src/lib/order-rank";
+
+// A stored rank is only usable if the plugin can LexoRank.parse() it. Earlier
+// versions of this script wrote base-36 strings that are NOT valid LexoRank, so
+// we treat those as needing a fix too (not just missing values).
+function isValidRank(value: string | undefined): boolean {
+  if (typeof value !== "string") return false;
+  try {
+    LexoRank.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface Row {
   _id: string;
@@ -53,10 +67,12 @@ async function main() {
   console.log("");
 
   const total = rows.length;
+  const orderRanks = generateOrderRanks(total);
   let willWrite = 0;
   const plan = rows.map((r, i) => {
-    const rank = orderRankForIndex(i, total);
-    const needs = force || !r.orderRank;
+    const rank = orderRanks[i];
+    // Fix docs that are missing a rank OR have an invalid (unparseable) one.
+    const needs = force || !isValidRank(r.orderRank);
     if (needs) willWrite++;
     return { ...r, rank, needs };
   });
