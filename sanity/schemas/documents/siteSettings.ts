@@ -109,7 +109,8 @@ export const siteSettings = defineType({
       name: "homeIntroHeading",
       title: "Intro heading",
       type: "string",
-      description: "Optional heading for the 'about' section below the hero (e.g. 'Welcome').",
+      description:
+        "Optional heading for the 'about' section below the hero (e.g. 'Welcome'). NOTE: the PHOTO shown in this section comes from 'Instructors' in the left sidebar (edit your photo + bio there), not here.",
       group: "homepage",
     }),
     defineField({

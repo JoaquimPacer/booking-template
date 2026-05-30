@@ -36,24 +36,25 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
+      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+        {/* Left: logo / business name */}
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           {logoUrl ? (
             <Image
               src={logoUrl}
               alt={siteName}
-              width={180}
-              height={48}
+              width={200}
+              height={56}
               priority
-              className="h-10 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           ) : (
             <span className="text-lg font-semibold tracking-tight">{siteName}</span>
           )}
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 md:flex">
+        {/* Center: nav links, spread across the bar */}
+        <nav className="hidden flex-1 items-center justify-center gap-8 md:flex">
           {navItems.map((item) => (
             <Link
               key={item._id}
@@ -63,15 +64,21 @@ export async function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          {showHeaderCta && (
-            <Link
-              href={headerCtaHref}
-              className={cn(buttonVariants({ variant: headerCtaVariant }), ctaSizeClasses(headerCtaSize))}
-            >
-              {headerCtaLabel}
-            </Link>
-          )}
         </nav>
+
+        {/* Right: the primary button */}
+        {showHeaderCta && (
+          <Link
+            href={headerCtaHref}
+            className={cn(
+              "hidden shrink-0 md:inline-flex",
+              buttonVariants({ variant: headerCtaVariant }),
+              ctaSizeClasses(headerCtaSize),
+            )}
+          >
+            {headerCtaLabel}
+          </Link>
+        )}
 
         {/* Mobile menu (client component: closes on tap) */}
         <MobileNav
