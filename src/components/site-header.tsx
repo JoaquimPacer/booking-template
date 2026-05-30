@@ -1,17 +1,11 @@
 // Top navigation. Server component. Pulls site name, logo, and header
-// nav items from Sanity. Includes a mobile drawer (shadcn Sheet).
+// nav items from Sanity. The mobile drawer is a separate client component
+// (MobileNav) so it can close on tap.
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { MobileNav } from "@/components/mobile-nav";
 import { urlFor } from "@/lib/sanity-image";
 import { cn } from "@/lib/utils";
 import { ctaSizeClasses } from "@/lib/cta";
@@ -24,7 +18,7 @@ export async function SiteHeader() {
   ]);
 
   const logoUrl = siteSettings?.brand?.logo
-    ? urlFor(siteSettings.brand.logo)?.width(200).height(60).fit("max").url()
+    ? urlFor(siteSettings.brand.logo)?.width(240).height(80).fit("max").url()
     : null;
 
   const siteName = siteSettings?.name ?? "Booking Template";
@@ -48,10 +42,10 @@ export async function SiteHeader() {
             <Image
               src={logoUrl}
               alt={siteName}
-              width={150}
-              height={40}
+              width={180}
+              height={48}
               priority
-              className="h-8 w-auto"
+              className="h-10 w-auto object-contain"
             />
           ) : (
             <span className="text-lg font-semibold tracking-tight">{siteName}</span>
@@ -79,38 +73,17 @@ export async function SiteHeader() {
           )}
         </nav>
 
-        {/* Mobile menu */}
-        <Sheet>
-          <SheetTrigger
-            className={`${buttonVariants({ variant: "ghost", size: "icon" })} md:hidden`}
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" />
-          </SheetTrigger>
-          <SheetContent side="right" className="w-72">
-            <SheetTitle className="text-left">{siteName}</SheetTitle>
-            <SheetDescription className="sr-only">Main navigation</SheetDescription>
-            <nav className="mt-6 flex flex-col gap-4">
-              {navItems.map((item) => (
-                <Link
-                  key={item._id}
-                  href={item.href}
-                  className="text-base font-medium text-foreground/80 transition-colors hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              {showHeaderCta && (
-                <Link
-                  href={headerCtaHref}
-                  className={cn(buttonVariants({ variant: headerCtaVariant }), ctaSizeClasses(headerCtaSize), "mt-2")}
-                >
-                  {headerCtaLabel}
-                </Link>
-              )}
-            </nav>
-          </SheetContent>
-        </Sheet>
+        {/* Mobile menu (client component: closes on tap) */}
+        <MobileNav
+          siteName={siteName}
+          navItems={navItems}
+          cta={{
+            label: headerCtaLabel,
+            href: headerCtaHref,
+            variant: headerCtaVariant,
+            show: showHeaderCta,
+          }}
+        />
       </div>
     </header>
   );

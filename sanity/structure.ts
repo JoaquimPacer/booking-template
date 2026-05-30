@@ -3,8 +3,9 @@
 // the public site's display order), keeps the rest at default.
 
 import type { StructureResolver } from "sanity/structure";
+import { orderableDocumentListDeskItem } from "@sanity/orderable-document-list";
 
-export const structure: StructureResolver = (S) =>
+export const structure: StructureResolver = (S, context) =>
   S.list()
     .title("Content")
     .items([
@@ -19,14 +20,13 @@ export const structure: StructureResolver = (S) =>
             .title("Site Settings"),
         ),
       S.divider(),
-      // Document types sorted by `order` field where applicable.
-      S.documentTypeListItem("service")
-        .title("Services")
-        .child(
-          S.documentTypeList("service")
-            .title("Services")
-            .defaultOrdering([{ field: "order", direction: "asc" }]),
-        ),
+      // Services: drag-to-reorder list (position stored in orderRank).
+      orderableDocumentListDeskItem({
+        type: "service",
+        title: "Services",
+        S,
+        context,
+      }),
       S.documentTypeListItem("instructor").title("Instructors"),
       S.documentTypeListItem("faq")
         .title("FAQs")

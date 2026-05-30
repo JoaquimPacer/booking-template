@@ -12,15 +12,20 @@ import { set, unset } from "sanity";
 // the families we offer; if you add a new font option here, add it to the
 // Google Fonts URL too AND to the schema options in brand.ts.
 const GOOGLE_FONTS_HREF =
-  "https://fonts.googleapis.com/css2?family=Geist:wght@400;700&family=Inter:wght@400;700&family=Lora:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Geist:wght@400;700&family=Inter:wght@400;700&family=Lora:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Cormorant+Garamond:wght@400;600;700&family=Poppins:wght@400;600;700&family=DM+Serif+Display:wght@400&display=swap";
 
 const FONT_OPTIONS = [
+  // Sans-serif (clean, modern)
   { value: "Geist", label: "Geist (modern, clean sans-serif; default)" },
   { value: "Inter", label: "Inter (versatile modern sans-serif)" },
+  { value: "Montserrat", label: "Montserrat (modern geometric sans)" },
+  { value: "Poppins", label: "Poppins (friendly, rounded sans)" },
+  // Serif (elegant, traditional)
   { value: "Playfair Display", label: "Playfair Display (elegant serif; luxury feel)" },
+  { value: "DM Serif Display", label: "DM Serif Display (striking display serif; great for headings)" },
+  { value: "Cormorant Garamond", label: "Cormorant Garamond (refined, spa-like serif)" },
   { value: "Lora", label: "Lora (warm serif; approachable)" },
   { value: "Merriweather", label: "Merriweather (traditional serif)" },
-  { value: "Montserrat", label: "Montserrat (modern geometric sans)" },
 ];
 
 export function FontPicker(props: StringInputProps) {

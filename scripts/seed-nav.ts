@@ -16,6 +16,7 @@ import "dotenv/config";
 
 // location: "header" (top bar + hamburger), "footer", or "both".
 const NAV = [
+  { key: "home", label: "Home", href: "/", location: "both", order: 5 },
   { key: "services", label: "Services", href: "/services", location: "both", order: 10 },
   { key: "about", label: "About", href: "/about", location: "both", order: 20 },
   { key: "faq", label: "FAQ", href: "/faq", location: "both", order: 30 },

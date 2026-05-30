@@ -1,4 +1,5 @@
 import { defineField, defineType } from "sanity";
+import { orderRankField } from "@sanity/orderable-document-list";
 
 // Marketing-side of a bookable service. Operational fields (price, duration,
 // capacity) live in Postgres on the Service table; this doc holds the
@@ -83,12 +84,17 @@ export const service = defineType({
       of: [{ type: "block" }],
       description: "Step-by-step or bulleted list of what the client experiences.",
     }),
+    // Drag-to-reorder: editors reorder services by dragging them in the
+    // Services list (no typing numbers). The plugin stores the position here.
+    orderRankField({ type: "service" }),
+    // Legacy numeric order, hidden from the form. Kept as a tiebreak so the
+    // public site still has a stable order before the first drag.
     defineField({
       name: "order",
       title: "Display order",
       type: "number",
-      description: "Lower numbers appear first on the services page.",
       initialValue: 100,
+      hidden: true,
     }),
     defineField({
       name: "isActive",
