@@ -181,7 +181,10 @@ export default async function HomePage() {
             Browse our services and find an open time today.
           </p>
           <div className="mt-8">
-            <Link href="/services" className={`${buttonVariants({ size: "lg" })} px-8`}>
+            <Link
+              href="/services"
+              className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
+            >
               See services
             </Link>
           </div>
