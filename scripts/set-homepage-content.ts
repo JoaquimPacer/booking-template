@@ -20,6 +20,7 @@
 import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
+import { colorFromHex } from "./lib/sanity-color";
 
 // Warm, specific, human intro copy. Pulled from Theresa's real background
 // (28 yrs experience, RN/BSN, two-time cancer survivor, oncology focus).
@@ -29,14 +30,15 @@ const INTRO_BODY = [
   "She is a two-time cancer survivor, which is part of why oncology massage and lymphatic work are at the heart of her practice. Whether you are recovering from treatment, managing chronic pain, or simply need to slow down and breathe, you are in steady, experienced hands.",
 ].join("\n\n");
 
-// Calming default palette (matches the code defaults in BrandTheme). Hex only;
-// @sanity/color-input also stores hsl/rgb, but hex alone renders correctly.
+// Calming default palette (matches the code defaults in BrandTheme).
+// colorFromHex builds the COMPLETE color-input object (hex + alpha + hsl/hsv/rgb)
+// so the Studio color picker renders the swatch and stays fully editable.
 const BRAND_COLORS = {
-  primaryColor: { _type: "color", hex: "#4f6b5d" }, // muted sage green
-  secondaryColor: { _type: "color", hex: "#e6e0d6" }, // soft sand
-  accentColor: { _type: "color", hex: "#b08d57" }, // warm gold
-  backgroundColor: { _type: "color", hex: "#f7f4ef" }, // warm cream
-  foregroundColor: { _type: "color", hex: "#33302b" }, // warm charcoal
+  primaryColor: colorFromHex("#4f6b5d"), // muted sage green
+  secondaryColor: colorFromHex("#e6e0d6"), // soft sand
+  accentColor: colorFromHex("#b08d57"), // warm gold
+  backgroundColor: colorFromHex("#f7f4ef"), // warm cream
+  foregroundColor: colorFromHex("#33302b"), // warm charcoal
 };
 
 async function main() {
