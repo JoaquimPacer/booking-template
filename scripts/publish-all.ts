@@ -10,9 +10,10 @@
 //   npx tsx scripts/publish-all.ts --apply    # publish every draft
 //
 // HOW IT WORKS: a draft is a document whose _id starts with "drafts.". Publishing
-// means promoting the draft to its published id. We use Sanity's official
-// document "publish" action, which preserves edit history (cleaner than a manual
-// create-then-delete).
+// means promoting the draft to its published id. We do this the universally
+// supported way: write the draft's content to the published id (createOrReplace),
+// then delete the draft, inside one transaction. (The newer Actions API returns
+// 404 on some project configs, so we avoid it.)
 //
 // SAFE: publishing only makes your already-saved draft edits live. It does not
 // invent or delete content. (Backs up the list of what it published for record.)
@@ -33,8 +34,10 @@ async function main() {
   const apply = process.argv.includes("--apply");
   const { sanityWrite } = await import("../src/lib/sanity-write");
 
-  const drafts = await sanityWrite.fetch<DraftRow[]>(
-    groq`*[_id in path("drafts.**")]{ _id, _type, title, name, question }`,
+  // Fetch FULL draft docs (all fields), so we can write their content to the
+  // published id.
+  const drafts = await sanityWrite.fetch<Array<Record<string, unknown> & DraftRow>>(
+    groq`*[_id in path("drafts.**")]`,
   );
 
   console.log(`Project: ${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}`);
@@ -65,11 +68,16 @@ async function main() {
   for (const d of drafts) {
     const publishedId = d._id.replace(/^drafts\./, "");
     try {
-      await sanityWrite.action({
-        actionType: "sanity.action.document.publish",
-        draftId: d._id,
-        publishedId,
-      });
+      // Copy the draft's content onto the published id, then remove the draft.
+      // One transaction = atomic (both happen or neither).
+      const { _id, _rev, ...content } = d as Record<string, unknown> & { _rev?: string };
+      void _id;
+      void _rev;
+      await sanityWrite
+        .transaction()
+        .createOrReplace({ ...content, _id: publishedId } as { _id: string; _type: string })
+        .delete(d._id)
+        .commit();
       console.log(`  published ${publishedId}`);
       ok++;
     } catch (e) {
