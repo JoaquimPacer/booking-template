@@ -18,6 +18,7 @@ import {
   buildServiceJsonLd,
 } from "@/lib/seo";
 import { bookingHref, isExternalHref } from "@/lib/booking-link";
+import { cn } from "@/lib/utils";
 
 // Next.js requires segment config to be a literal; keep in sync with REVALIDATE_SECONDS in src/lib/cache.ts.
 export const revalidate = 10;
@@ -93,7 +94,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
         <div className="container mx-auto max-w-3xl px-4 pb-10 pt-24 text-background">
           <Link
             href="/services"
-            className="text-sm text-background/80 hover:text-background"
+            className="text-base text-background/80 hover:text-background"
           >
             &larr; All services
           </Link>
@@ -138,7 +139,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
             )
               ? { target: "_blank", rel: "noopener noreferrer" }
               : {})}
-            className={`${buttonVariants({ size: "lg" })} px-8`}
+            className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
           >
             Book this service
           </Link>
