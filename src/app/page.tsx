@@ -101,7 +101,7 @@ export default async function HomePage() {
                   )}
                 </div>
               )}
-              <div className="mt-8">
+              <div className="mt-8 flex justify-center">
                 <Link
                   href="/about"
                   className={cn(buttonVariants({ variant: "outline" }), "h-auto px-6 py-3 text-base")}

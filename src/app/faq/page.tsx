@@ -71,7 +71,7 @@ export default async function FaqPage() {
               {categories.length > 1 && (
                 <h2 className="mb-4 text-xl font-semibold">{category}</h2>
               )}
-              <Accordion className="w-full">
+              <Accordion multiple className="w-full">
                 {grouped[category].map((faq) => (
                   <AccordionItem key={faq._id} value={faq._id}>
                     <AccordionTrigger className="text-left text-base font-medium">
