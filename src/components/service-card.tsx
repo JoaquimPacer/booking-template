@@ -7,7 +7,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, Flower2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { urlFor } from "@/lib/sanity-image";
 import { formatDurationMinutes, formatPriceCents } from "@/lib/format";
@@ -34,8 +34,11 @@ export function ServiceCard({ service }: ServiceCardProps) {
         aria-label={`Learn more about ${service.title}`}
       />
 
-      {imageUrl && (
-        <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+      {/* Image area is ALWAYS present so every card is the same height. With a
+          photo it shows it; without, an on-brand gradient placeholder keeps the
+          grid tidy until a hero image is added in Sanity. */}
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+        {imageUrl ? (
           <Image
             src={imageUrl}
             alt={service.title}
@@ -43,8 +46,19 @@ export function ServiceCard({ service }: ServiceCardProps) {
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
-        </div>
-      )}
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, var(--brand-primary, #4f6b5d), var(--brand-secondary, #e6e0d6))",
+            }}
+            aria-hidden="true"
+          >
+            <Flower2 className="size-10 text-background/70" />
+          </div>
+        )}
+      </div>
       <CardHeader>
         <CardTitle className="text-xl transition-colors group-hover:text-primary">
           {service.title}
