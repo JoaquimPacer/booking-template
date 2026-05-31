@@ -78,6 +78,7 @@ export default async function HomePage() {
                   alt={primaryInstructor.name}
                   width={600}
                   height={600}
+                  priority
                   className="aspect-square w-full rounded-2xl object-cover"
                 />
               </div>
