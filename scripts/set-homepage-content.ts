@@ -41,6 +41,18 @@ const BRAND_COLORS = {
   foregroundColor: colorFromHex("#33302b"), // warm charcoal
 };
 
+// Footer line (replaces the test text). Year is left out so it never goes stale.
+const FOOTER_TEXT =
+  "Theresa Attea, LMT, CMLDT, LMTI, RN, BSN. Licensed massage therapy in Austin, Texas.";
+
+// SEO defaults. metaTitle ~50-60 chars; metaDescription ~150-160. Written to read
+// well in a Google result and reflect her specialties + location.
+const SEO = {
+  metaTitle: "Theresa Attea, LMT | Massage Therapy in Austin",
+  metaDescription:
+    "Oncology, therapeutic, and lymphatic massage in Austin, TX with Theresa Attea, LMT, a licensed therapist and former critical-care nurse. Book your session.",
+};
+
 async function main() {
   const apply = process.argv.includes("--apply");
   const { sanityWrite } = await import("../src/lib/sanity-write");
@@ -65,6 +77,9 @@ async function main() {
   console.log(`  homeIntroHeading = "${INTRO_HEADING}"`);
   console.log(`  homeIntroBody    = (${INTRO_BODY.length} chars)`);
   console.log(`  brand colors     = sage / sand / gold / cream / charcoal`);
+  console.log(`  footerText       = "${FOOTER_TEXT}"`);
+  console.log(`  defaultSeo.metaTitle       = "${SEO.metaTitle}" (${SEO.metaTitle.length} chars)`);
+  console.log(`  defaultSeo.metaDescription = (${SEO.metaDescription.length} chars)`);
   console.log("");
 
   if (!apply) {
@@ -74,6 +89,7 @@ async function main() {
 
   const id = (current as { _id: string })._id;
   const existingBrand = (current as { brand?: Record<string, unknown> }).brand ?? {};
+  const existingSeo = (current as { defaultSeo?: Record<string, unknown> }).defaultSeo ?? {};
   await sanityWrite
     .patch(id)
     .set({
@@ -81,10 +97,13 @@ async function main() {
       homeIntroBody: INTRO_BODY,
       // Merge colors into any existing brand object (keeps fonts/logo/favicon).
       brand: { ...existingBrand, ...BRAND_COLORS },
+      footerText: FOOTER_TEXT,
+      // Merge SEO so an existing ogImage is preserved.
+      defaultSeo: { _type: "seo", ...existingSeo, metaTitle: SEO.metaTitle, metaDescription: SEO.metaDescription },
     })
     .commit();
 
-  console.log("Done. Refresh the homepage to see the new intro + palette.");
+  console.log("Done. Refresh the homepage to see the new intro + palette + footer + SEO.");
 }
 
 main().catch((err) => {
