@@ -80,9 +80,12 @@ export async function SiteHeader() {
             href={headerCtaHref}
             {...(headerCtaExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className={cn(
-              "hidden shrink-0 md:inline-flex",
               buttonVariants({ variant: headerCtaVariant }),
               ctaSizeClasses(headerCtaSize),
+              // Display classes LAST so tailwind-merge keeps `hidden` over the
+              // variant's base `inline-flex` (otherwise the button leaks onto
+              // mobile, where the hamburger already covers booking).
+              "shrink-0 max-md:hidden",
             )}
           >
             {headerCtaLabel}
