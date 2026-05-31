@@ -17,6 +17,7 @@ import {
   buildPageMetadata,
   buildServiceJsonLd,
 } from "@/lib/seo";
+import { bookingHref, isExternalHref } from "@/lib/booking-link";
 
 // Next.js requires segment config to be a literal; keep in sync with REVALIDATE_SECONDS in src/lib/cache.ts.
 export const revalidate = 10;
@@ -131,7 +132,12 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
       <div className="container mx-auto max-w-3xl px-4 pt-10">
         <div>
           <Link
-            href={`/book/${service.slug.current}`}
+            href={bookingHref(siteSettings?.externalBookingUrl, service.slug.current)}
+            {...(isExternalHref(
+              bookingHref(siteSettings?.externalBookingUrl, service.slug.current),
+            )
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
             className={`${buttonVariants({ size: "lg" })} px-8`}
           >
             Book this service

@@ -24,12 +24,14 @@ function colorHex(color: SanityColor | string | undefined, fallback: string): st
 export function BrandTheme({ siteSettings }: BrandThemeProps) {
   const brand = siteSettings?.brand;
 
-  // Defaults match shadcn's slate base (just dark neutral primary).
-  const primary = colorHex(brand?.primaryColor, "#0f172a");
-  const secondary = colorHex(brand?.secondaryColor, "#f1f5f9");
-  const accent = colorHex(brand?.accentColor, "#f1f5f9");
-  const background = colorHex(brand?.backgroundColor, "#ffffff");
-  const foreground = colorHex(brand?.foregroundColor, "#0f172a");
+  // Professional, calming default palette (warm cream + sage green + charcoal).
+  // A client's Sanity colors override these; an unconfigured deploy still looks
+  // intentional rather than stark.
+  const primary = colorHex(brand?.primaryColor, "#4f6b5d"); // muted sage green
+  const secondary = colorHex(brand?.secondaryColor, "#e6e0d6"); // soft sand
+  const accent = colorHex(brand?.accentColor, "#b08d57"); // warm gold
+  const background = colorHex(brand?.backgroundColor, "#f7f4ef"); // warm cream
+  const foreground = colorHex(brand?.foregroundColor, "#33302b"); // warm charcoal
 
   // Emit hex values directly. Tailwind v4's @theme inline resolves
   // `bg-primary` -> `background-color: var(--primary)` -> the hex below.
