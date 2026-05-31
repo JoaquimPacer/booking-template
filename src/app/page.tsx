@@ -7,6 +7,7 @@ import { JsonLd } from "@/components/json-ld";
 import { ServiceCard } from "@/components/service-card";
 import { TestimonialCard } from "@/components/testimonial-card";
 import { urlFor } from "@/lib/sanity-image";
+import { cn } from "@/lib/utils";
 import {
   getAllInstructors,
   getAllServices,
@@ -101,7 +102,10 @@ export default async function HomePage() {
                 </div>
               )}
               <div className="mt-8">
-                <Link href="/about" className={buttonVariants({ variant: "outline" })}>
+                <Link
+                  href="/about"
+                  className={cn(buttonVariants({ variant: "outline" }), "h-auto px-6 py-3 text-base")}
+                >
                   Learn more
                 </Link>
               </div>
@@ -129,7 +133,10 @@ export default async function HomePage() {
           </div>
           {services.length > 6 && (
             <div className="mt-10 flex justify-center">
-              <Link href="/services" className={buttonVariants({ variant: "outline" })}>
+              <Link
+                href="/services"
+                className={cn(buttonVariants({ variant: "outline" }), "h-auto px-6 py-3 text-base")}
+              >
                 See all services
               </Link>
             </div>

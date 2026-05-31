@@ -53,10 +53,10 @@ export function ServiceCard({ service }: ServiceCardProps) {
           <p className="mt-2 text-sm text-foreground/70">{service.tagline}</p>
         )}
         {(duration || price) && (
-          <div className="mt-3 flex items-center gap-4 text-sm text-foreground/80">
+          <div className="mt-3 flex items-center gap-4 text-base text-foreground/80">
             {duration && (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="size-3.5" aria-hidden="true" />
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="size-4" aria-hidden="true" />
                 {duration}
               </span>
             )}
@@ -65,7 +65,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
         )}
       </CardHeader>
       <CardContent className="mt-auto pt-4">
-        <span className="text-sm font-semibold text-primary transition-all group-hover:gap-2">
+        <span className="inline-flex items-center gap-1 text-base font-semibold text-primary transition-all group-hover:gap-2">
           View details &amp; book &rarr;
         </span>
       </CardContent>
