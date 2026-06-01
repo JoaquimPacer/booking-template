@@ -11,7 +11,7 @@ Work top to bottom. Most steps are one-time per client.
   - `npx tsx scripts/set-homepage-content.ts --apply`
   - `npx tsx scripts/seed-faqs.ts --apply`
   - `npx tsx scripts/seed-nav.ts --apply`
-- [ ] Add a **hero image** to each service in Studio, then `npx tsx scripts/publish-all.ts --apply`.
+- [ ] Add a **hero image** to each service in Studio, then `npx tsx scripts/publish-all.ts --apply` 
 - [ ] Remove any leftover test text (footer, taglines).
 
 ## 1. Booking (decide which mode)

@@ -9,6 +9,14 @@ export const service = defineType({
   title: "Service",
   type: "document",
   fields: [
+    // Active first, so it's easy to toggle a service on/off without scrolling.
+    defineField({
+      name: "isActive",
+      title: "Active (showing on the site)",
+      type: "boolean",
+      description: "Turn off to hide this service from the public site without deleting it.",
+      initialValue: true,
+    }),
     defineField({
       name: "title",
       title: "Service name",
@@ -97,11 +105,11 @@ export const service = defineType({
       hidden: true,
     }),
     defineField({
-      name: "isActive",
-      title: "Active",
-      type: "boolean",
-      description: "Uncheck to hide from the public site without deleting.",
-      initialValue: true,
+      name: "bookingUrl",
+      title: "Booking link for this service (optional)",
+      type: "url",
+      description:
+        "Optional. Paste this service's exact JaneApp (or other scheduler) link so the Book button lands right on this treatment. Leave blank to use the site-wide booking link from Site Settings.",
     }),
     defineField({
       name: "bookingMode",

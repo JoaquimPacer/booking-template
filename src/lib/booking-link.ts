@@ -12,13 +12,17 @@
 export const BOOKING_HREF = "__booking__";
 
 /**
- * Where a service-level "Book" button should point.
- * External URL if configured, else the built-in /book/[slug] page.
+ * Where a service-level "Book" button should point. Priority:
+ *   1. the service's own booking link (per-service Jane deep link), if set
+ *   2. the site-wide external booking link, if set
+ *   3. the built-in /book/[slug] page
  */
 export function bookingHref(
   externalBookingUrl: string | undefined | null,
   slug?: string,
+  serviceBookingUrl?: string | null,
 ): string {
+  if (serviceBookingUrl) return serviceBookingUrl;
   if (externalBookingUrl) return externalBookingUrl;
   return slug ? `/book/${slug}` : "/services";
 }

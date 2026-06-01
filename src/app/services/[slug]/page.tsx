@@ -133,9 +133,9 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
       <div className="container mx-auto max-w-3xl px-4 pt-10">
         <div>
           <Link
-            href={bookingHref(siteSettings?.externalBookingUrl, service.slug.current)}
+            href={bookingHref(siteSettings?.externalBookingUrl, service.slug.current, service.bookingUrl)}
             {...(isExternalHref(
-              bookingHref(siteSettings?.externalBookingUrl, service.slug.current),
+              bookingHref(siteSettings?.externalBookingUrl, service.slug.current, service.bookingUrl),
             )
               ? { target: "_blank", rel: "noopener noreferrer" }
               : {})}
