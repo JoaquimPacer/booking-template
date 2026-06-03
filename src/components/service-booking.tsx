@@ -69,10 +69,10 @@ export function ServiceBooking({
                   aria-checked={isSelected}
                   onClick={() => setSelected(i)}
                   className={cn(
-                    "rounded-full border px-5 py-2.5 text-base font-medium transition-colors",
+                    "rounded-full border-2 px-5 py-2.5 text-base font-medium transition-colors",
                     isSelected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input bg-background text-foreground/80 hover:border-primary/60 hover:text-foreground",
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-foreground/25 bg-background text-foreground/80 hover:border-primary hover:text-foreground",
                   )}
                 >
                   {label}
@@ -80,9 +80,7 @@ export function ServiceBooking({
                     <span
                       className={cn(
                         "ml-2",
-                        isSelected
-                          ? "text-primary-foreground/90"
-                          : "text-foreground/60",
+                        isSelected ? "text-foreground/70" : "text-foreground/50",
                       )}
                     >
                       {formatPriceCents(o.priceCents)}
