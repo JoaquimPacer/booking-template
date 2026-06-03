@@ -87,6 +87,13 @@ export type NavItem = {
   order: number;
 };
 
+export type ServiceOption = {
+  label?: string;
+  durationMinutes?: number;
+  priceCents?: number;
+  bookingUrl?: string;
+};
+
 export type Service = {
   _id: string;
   title: string;
@@ -96,6 +103,7 @@ export type Service = {
   bufferMinutes?: number;
   priceCents?: number;
   bookingUrl?: string;
+  options?: ServiceOption[];
   bookingMode?: "slots" | "inquire" | "hidden";
   description?: string;
   body?: unknown;
@@ -171,7 +179,7 @@ export async function getNavItems(
 
 export async function getAllServices(): Promise<Service[]> {
   return sanity.fetch<Service[]>(
-    groq`*[_type == "service" && isActive != false] | order(orderRank asc, order asc) { _id, title, slug, tagline, description, durationMinutes, priceCents, bookingUrl, bookingMode, heroImage, order, isActive }`,
+    groq`*[_type == "service" && isActive != false] | order(orderRank asc, order asc) { _id, title, slug, tagline, description, durationMinutes, priceCents, bookingUrl, options[]{label, durationMinutes, priceCents, bookingUrl}, bookingMode, heroImage, order, isActive }`,
     {},
     { next: { revalidate: REVALIDATE_SECONDS } },
   );

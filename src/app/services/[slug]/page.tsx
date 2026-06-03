@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock } from "lucide-react";
 import { PortableText, type PortableTextBlock } from "@portabletext/react";
-import { buttonVariants } from "@/components/ui/button";
+import { ServiceBooking } from "@/components/service-booking";
 import { JsonLd } from "@/components/json-ld";
 import { urlFor } from "@/lib/sanity-image";
 import { formatDurationMinutes, formatPriceCents } from "@/lib/format";
@@ -17,8 +17,6 @@ import {
   buildPageMetadata,
   buildServiceJsonLd,
 } from "@/lib/seo";
-import { bookingHref, isExternalHref } from "@/lib/booking-link";
-import { cn } from "@/lib/utils";
 
 // Next.js requires segment config to be a literal; keep in sync with REVALIDATE_SECONDS in src/lib/cache.ts.
 export const revalidate = 10;
@@ -58,6 +56,16 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
   const heroUrl = service.heroImage
     ? urlFor(service.heroImage)?.width(1600).height(800).fit("crop").auto("format").url()
     : null;
+
+  const options = Array.isArray(service.options) ? service.options : [];
+  const hasOptions = options.length > 0;
+  const optDurations = options
+    .map((o) => o.durationMinutes)
+    .filter((d): d is number => typeof d === "number");
+  const optPrices = options
+    .map((o) => o.priceCents)
+    .filter((p): p is number => typeof p === "number");
+  const fromPrice = optPrices.length ? Math.min(...optPrices) : undefined;
 
   return (
     <article className="pb-20">
@@ -112,38 +120,49 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
               {service.tagline}
             </p>
           )}
-          {(service.durationMinutes || service.priceCents) && (
-            <div className="mt-4 flex items-center gap-6">
-              {service.durationMinutes && (
-                <span className="inline-flex items-center gap-2 text-background/90">
-                  <Clock className="size-4" aria-hidden="true" />
-                  {formatDurationMinutes(service.durationMinutes)}
-                </span>
-              )}
-              {service.priceCents && (
-                <span className="text-xl font-semibold">
-                  {formatPriceCents(service.priceCents)}
-                </span>
-              )}
-            </div>
+          {hasOptions ? (
+            (optDurations.length > 0 || fromPrice != null) && (
+              <div className="mt-4 flex items-center gap-6">
+                {optDurations.length > 0 && (
+                  <span className="inline-flex items-center gap-2 text-background/90">
+                    <Clock className="size-4" aria-hidden="true" />
+                    {optDurations.map((d) => formatDurationMinutes(d)).join(" or ")}
+                  </span>
+                )}
+                {fromPrice != null && (
+                  <span className="text-xl font-semibold">
+                    from {formatPriceCents(fromPrice)}
+                  </span>
+                )}
+              </div>
+            )
+          ) : (
+            (service.durationMinutes || service.priceCents) && (
+              <div className="mt-4 flex items-center gap-6">
+                {service.durationMinutes && (
+                  <span className="inline-flex items-center gap-2 text-background/90">
+                    <Clock className="size-4" aria-hidden="true" />
+                    {formatDurationMinutes(service.durationMinutes)}
+                  </span>
+                )}
+                {service.priceCents && (
+                  <span className="text-xl font-semibold">
+                    {formatPriceCents(service.priceCents)}
+                  </span>
+                )}
+              </div>
+            )
           )}
         </div>
       </header>
 
       <div className="container mx-auto max-w-3xl px-4 pt-10">
-        <div>
-          <Link
-            href={bookingHref(siteSettings?.externalBookingUrl, service.slug.current, service.bookingUrl)}
-            {...(isExternalHref(
-              bookingHref(siteSettings?.externalBookingUrl, service.slug.current, service.bookingUrl),
-            )
-              ? { target: "_blank", rel: "noopener noreferrer" }
-              : {})}
-            className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
-          >
-            Book this service
-          </Link>
-        </div>
+        <ServiceBooking
+          slug={service.slug.current}
+          externalBookingUrl={siteSettings?.externalBookingUrl}
+          bookingUrl={service.bookingUrl}
+          options={service.options}
+        />
 
         {Boolean(service.body) && (
           <div className="prose prose-slate mt-12 max-w-none">

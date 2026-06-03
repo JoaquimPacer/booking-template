@@ -1,4 +1,4 @@
-import { defineField, defineType } from "sanity";
+import { defineArrayMember, defineField, defineType } from "sanity";
 import { orderRankField } from "@sanity/orderable-document-list";
 
 // Marketing-side of a bookable service. Operational fields (price, duration,
@@ -110,6 +110,67 @@ export const service = defineType({
       type: "url",
       description:
         "Optional. Paste this service's exact JaneApp (or other scheduler) link so the Book button lands right on this treatment. Leave blank to use the site-wide booking link from Site Settings.",
+    }),
+    defineField({
+      name: "options",
+      title: "Length / price options",
+      type: "array",
+      description:
+        "Leave empty for a single-price service (it uses the Duration and Price above). Add two or more options to offer different lengths (e.g. 60 and 90 minutes), each with its own price and booking link. When set, these take over and the service page shows a length picker.",
+      of: [
+        defineArrayMember({
+          type: "object",
+          name: "serviceOption",
+          fields: [
+            defineField({
+              name: "label",
+              title: "Label",
+              type: "string",
+              description: 'Shown on the picker, e.g. "60 minutes".',
+              validation: (r) => r.required(),
+            }),
+            defineField({
+              name: "durationMinutes",
+              title: "Duration (minutes)",
+              type: "number",
+              validation: (r) => r.positive().integer(),
+            }),
+            defineField({
+              name: "priceCents",
+              title: "Price (in cents)",
+              type: "number",
+              description: "Price in CENTS (dollars times 100). $135 = 13500.",
+              validation: (r) => r.positive().integer(),
+            }),
+            defineField({
+              name: "bookingUrl",
+              title: "Booking link for this option",
+              type: "url",
+              description:
+                "The JaneApp (or other scheduler) deep link for this specific length.",
+            }),
+          ],
+          preview: {
+            select: {
+              label: "label",
+              priceCents: "priceCents",
+              durationMinutes: "durationMinutes",
+            },
+            prepare({ label, priceCents, durationMinutes }) {
+              const name =
+                label ||
+                (typeof durationMinutes === "number"
+                  ? `${durationMinutes} minutes`
+                  : "Option");
+              const price =
+                typeof priceCents === "number"
+                  ? ` — $${(priceCents / 100).toFixed(2).replace(/\.00$/, "")}`
+                  : "";
+              return { title: `${name}${price}` };
+            },
+          },
+        }),
+      ],
     }),
     defineField({
       name: "bookingMode",

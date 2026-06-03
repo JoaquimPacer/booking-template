@@ -21,16 +21,32 @@ export function ServiceCard({ service }: ServiceCardProps) {
   const imageUrl = service.heroImage
     ? urlFor(service.heroImage)?.width(800).height(500).fit("crop").url()
     : null;
-  const duration = formatDurationMinutes(service.durationMinutes);
-  const price = formatPriceCents(service.priceCents);
+  const options = Array.isArray(service.options) ? service.options : [];
+  const hasOptions = options.length > 0;
+  const optDurations = options
+    .map((o) => o.durationMinutes)
+    .filter((d): d is number => typeof d === "number");
+  const optPrices = options
+    .map((o) => o.priceCents)
+    .filter((p): p is number => typeof p === "number");
+  const duration = hasOptions
+    ? optDurations.map((d) => formatDurationMinutes(d)).join(" or ")
+    : formatDurationMinutes(service.durationMinutes);
+  const price = hasOptions
+    ? optPrices.length
+      ? `from ${formatPriceCents(Math.min(...optPrices))}`
+      : ""
+    : formatPriceCents(service.priceCents);
 
   return (
     <Card className="group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
-      {/* Stretched link: covers the whole card, navigates to the detail page.
-          Sits behind interactive children via z-0. */}
+      {/* Stretched link: covers the whole card (image included) and navigates to
+          the detail page. z-10 so it sits ABOVE the relative image container,
+          which otherwise swallows clicks on the photo. No other interactive
+          children, so nothing needs to sit above it. */}
       <Link
         href={`/services/${service.slug.current}`}
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-10"
         aria-label={`Learn more about ${service.title}`}
       />
 
