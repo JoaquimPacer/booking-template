@@ -21,6 +21,7 @@ export type SiteSettings = {
   name: string;
   tagline?: string;
   description?: string;
+  priceRange?: string;
   headerCta?: Cta;
   heroCta?: Cta;
   externalBookingUrl?: string;

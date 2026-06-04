@@ -112,13 +112,24 @@ export function buildLocalBusinessJsonLd(siteSettings: SiteSettings | null) {
     ? urlFor(siteSettings.brand.logo)?.width(400).url()
     : null;
 
+  // Representative image for the Google business card: logo, else the hero
+  // still image, else the SEO/OG image. Whichever is set.
+  const imageUrl =
+    logoUrl ||
+    (siteSettings.homeHero ? urlFor(siteSettings.homeHero)?.width(1200).url() : null) ||
+    (siteSettings.defaultSeo?.ogImage
+      ? urlFor(siteSettings.defaultSeo.ogImage)?.width(1200).url()
+      : null);
+
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: siteSettings.name,
     description: siteSettings.description ?? siteSettings.tagline,
     url: baseUrl,
-    ...(logoUrl && { logo: logoUrl, image: logoUrl }),
+    ...(logoUrl && { logo: logoUrl }),
+    ...(imageUrl && { image: imageUrl }),
+    ...(siteSettings.priceRange && { priceRange: siteSettings.priceRange }),
     ...(contact?.phone && { telephone: contact.phone }),
     ...(contact?.email && { email: contact.email }),
     ...(contact?.address && {

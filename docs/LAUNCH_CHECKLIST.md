@@ -12,6 +12,7 @@ Work top to bottom. Most steps are one-time per client.
   - `npx tsx scripts/seed-faqs.ts --apply`
   - `npx tsx scripts/seed-nav.ts --apply`
 - [ ] Add a **hero image** to each service in Studio, then `npx tsx scripts/publish-all.ts --apply` 
+- [ ] **Homepage hero:** prefer a still image. If you use a background video, keep it short and add a still poster image so the video is not the mobile load cost (an autoplay video is the heaviest item on a phone screen and drags down mobile performance).
 - [ ] Remove any leftover test text (footer, taglines).
 
 ## 1. Booking (decide which mode)
@@ -42,6 +43,7 @@ Work top to bottom. Most steps are one-time per client.
 - [ ] In Vercel: **Settings > Domains > Add** their domain (e.g. `theirbusiness.com`).
 - [ ] At their **registrar / DNS host**: add the DNS records **exactly as Vercel shows them** (currently apex A `216.198.79.1` and `www` CNAME `cname.vercel-dns.com`; Vercel may display newer values, use those). Vercel auto-issues SSL. Do **not** change nameservers (keeps their email intact) unless you're moving DNS to Cloudflare per section 2.
 - [ ] DNS propagation: 15 min - a few hours (up to 48). Verify the domain serves the site over HTTPS.
+- [ ] **Run the quality audits (target 90+ on mobile and desktop):** PageSpeed Insights (pagespeed.web.dev) for performance and Core Web Vitals (runs on Google's servers, not your laptop, and shows real-user field data; take the median of a few runs), Lighthouse for the category breakdown, and the Rich Results Test (search.google.com/test/rich-results) for structured data. Lighthouse and PSI are Chromium-only; for Safari, spot-check on a real iPhone (or WebPageTest).
 - [ ] Re-confirm the preview login wall is off / production is public.
 
 ## 4. Handoff

@@ -43,6 +43,14 @@ export const siteSettings = defineType({
       description: "One or two sentences. Shown under the hero headline and used as a fallback for Google.",
       group: "business",
     }),
+    defineField({
+      name: "priceRange",
+      title: "Price range",
+      type: "string",
+      description:
+        'Optional. A short price range shown in your Google business listing, e.g. "$135-$185" or "$$". Leave blank to omit it.',
+      group: "business",
+    }),
 
     // ---- Look & feel ----
     defineField({
