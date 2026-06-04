@@ -105,6 +105,7 @@ export default async function HomePage() {
               <div className="mt-8 flex justify-center">
                 <Link
                   href="/about"
+                  aria-label={`Learn more about ${siteSettings?.name ?? "our practice"}`}
                   className={cn(buttonVariants({ variant: "outline" }), "h-auto px-6 py-3 text-base")}
                 >
                   Learn more
