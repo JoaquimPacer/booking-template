@@ -136,6 +136,10 @@ export function buildLocalBusinessJsonLd(siteSettings: SiteSettings | null) {
       address: {
         "@type": "PostalAddress",
         streetAddress: contact.address,
+        ...(contact.addressLocality && { addressLocality: contact.addressLocality }),
+        ...(contact.addressRegion && { addressRegion: contact.addressRegion }),
+        ...(contact.postalCode && { postalCode: contact.postalCode }),
+        ...(contact.addressCountry && { addressCountry: contact.addressCountry }),
       },
     }),
     ...(contact?.hours && { openingHours: contact.hours }),

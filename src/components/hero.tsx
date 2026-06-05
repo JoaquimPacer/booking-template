@@ -1,11 +1,14 @@
-// Full-width hero with overlay text. Background is video (preferred),
-// image (fallback), or gradient (final fallback). All Sanity-driven.
-// Overlay opacity is configurable per-client; text-shadow on the title
-// adds extra legibility safety regardless of overlay strength.
+// Full-width hero with overlay text. The background image paints immediately as
+// the poster (and the Largest Contentful Paint element); if a hero video is set,
+// it loads after first paint and fades in over the image, so it never competes
+// with the initial page load. Falls back to a brand-color gradient if neither
+// image nor video is set. Overlay opacity is configurable per-client; the
+// text-shadow on the title adds legibility safety regardless of overlay strength.
 
 import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { HeroVideo } from "@/components/hero-video";
 import { urlFor } from "@/lib/sanity-image";
 import { cn } from "@/lib/utils";
 import { ctaSizeClasses, ctaAlignClass, type CtaSize, type CtaAlign } from "@/lib/cta";
@@ -53,34 +56,34 @@ export function Hero({
 
   return (
     <section className="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-foreground text-background">
-      {videoUrl ? (
-        <video
-          src={videoUrl}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          className="absolute inset-0 -z-10 h-full w-full object-cover"
-        />
-      ) : imageUrl ? (
-        <Image
-          src={imageUrl}
-          alt={title}
-          fill
-          priority
-          sizes="100vw"
-          className="absolute inset-0 -z-10 object-cover"
-        />
-      ) : (
-        <div
-          className="absolute inset-0 -z-10"
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg, var(--brand-primary, #0f172a), var(--brand-secondary, #475569))",
-          }}
-        />
-      )}
+      {/* Background media: the image paints immediately (poster + LCP); if a
+          video is set, it loads a moment later and fades in over the image. */}
+      <div className="absolute inset-0 -z-10">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={title}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+        ) : !videoUrl ? (
+          <div
+            className="h-full w-full"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, var(--brand-primary, #0f172a), var(--brand-secondary, #475569))",
+            }}
+          />
+        ) : null}
+        {videoUrl && (
+          <HeroVideo
+            src={videoUrl}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+      </div>
       <div
         className="absolute inset-0 -z-10"
         style={{ backgroundColor: `rgba(0, 0, 0, ${overlayAlpha})` }}

@@ -48,6 +48,10 @@ export type SiteSettings = {
     phone?: string;
     email?: string;
     address?: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    postalCode?: string;
+    addressCountry?: string;
     hours?: string;
     googleMapsUrl?: string;
     googlePlaceId?: string;

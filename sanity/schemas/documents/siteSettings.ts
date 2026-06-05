@@ -161,6 +161,30 @@ export const siteSettings = defineType({
         defineField({ name: "email", type: "string", validation: (r) => r.email() }),
         defineField({ name: "address", type: "text", rows: 3 }),
         defineField({
+          name: "addressLocality",
+          title: "City",
+          type: "string",
+          description: "City, for your Google business listing (e.g. Austin).",
+        }),
+        defineField({
+          name: "addressRegion",
+          title: "State / region",
+          type: "string",
+          description: "State or region (e.g. TX).",
+        }),
+        defineField({
+          name: "postalCode",
+          title: "ZIP / postal code",
+          type: "string",
+        }),
+        defineField({
+          name: "addressCountry",
+          title: "Country code",
+          type: "string",
+          description: "Two-letter country code (e.g. US).",
+          initialValue: "US",
+        }),
+        defineField({
           name: "hours",
           type: "text",
           rows: 4,
