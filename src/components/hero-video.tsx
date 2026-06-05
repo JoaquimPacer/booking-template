@@ -18,8 +18,9 @@ export function HeroVideo({ src, className }: HeroVideoProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Hold the video back until after the page has painted and settled.
-    const t = setTimeout(() => setMounted(true), 700);
+    // Hold the video back until after the page has painted and settled, so the
+    // hero poster image wins the network race and stays the LCP element.
+    const t = setTimeout(() => setMounted(true), 1500);
     return () => clearTimeout(t);
   }, []);
 
