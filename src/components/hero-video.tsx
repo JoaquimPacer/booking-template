@@ -18,9 +18,12 @@ export function HeroVideo({ src, className }: HeroVideoProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Hold the video back until after the page has painted and settled, so the
-    // hero poster image wins the network race and stays the LCP element.
-    const t = setTimeout(() => setMounted(true), 1500);
+    // A looping autoplay video keeps the viewport repainting, which wrecks the
+    // mobile Speed Index and makes the score swing run to run. So load it only
+    // on larger screens; phones show the still poster image (fast and stable).
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    const t = setTimeout(() => setMounted(true), 1200);
     return () => clearTimeout(t);
   }, []);
 
