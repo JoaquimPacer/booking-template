@@ -2,9 +2,6 @@
   "name": "booking-template",
   "version": "0.1.0",
   "private": true,
-  "browserslist": [
-    "since 2022 and not dead"
-  ],
   "scripts": {
     "dev": "next dev",
     "build": "prisma migrate deploy && next build",
