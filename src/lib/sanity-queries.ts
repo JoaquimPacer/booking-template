@@ -26,6 +26,7 @@ export type SiteSettings = {
   heroCta?: Cta;
   externalBookingUrl?: string;
   brand?: {
+    stylePreset?: string;
     primaryColor?: SanityColor;
     secondaryColor?: SanityColor;
     accentColor?: SanityColor;

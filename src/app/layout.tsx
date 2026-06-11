@@ -17,6 +17,7 @@ import "./globals.css";
 import { BrandTheme } from "@/components/brand-theme";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { StyleSwitcher } from "@/components/style-switcher";
 import { getSiteSettings } from "@/lib/sanity-queries";
 import { urlFor } from "@/lib/sanity-image";
 
@@ -92,10 +93,16 @@ export default async function RootLayout({
   const siteSettings = await getSiteSettings();
   const headingFontStack = fontVar(siteSettings?.brand?.headingFont, "system-ui, sans-serif");
   const bodyFontStack = fontVar(siteSettings?.brand?.bodyFont, "system-ui, sans-serif");
+  // Design preset from Sanity; every preset's CSS is keyed off this attribute
+  // in globals.css. Missing field (older datasets) = classic, the original look.
+  const stylePreset = siteSettings?.brand?.stylePreset ?? "classic";
+  // Demo switcher shows on preview deployments + local dev, never production.
+  const showStyleSwitcher = process.env.VERCEL_ENV !== "production";
 
   return (
     <html
       lang="en"
+      data-style={stylePreset}
       className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${montserrat.variable} ${cormorant.variable} ${poppins.variable} ${dmSerif.variable} h-full antialiased`}
       style={{
         ["--font-heading" as string]: headingFontStack,
@@ -112,6 +119,7 @@ export default async function RootLayout({
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        {showStyleSwitcher ? <StyleSwitcher /> : null}
         <Analytics />
       </body>
     </html>

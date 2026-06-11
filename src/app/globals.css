@@ -135,3 +135,19 @@
     font-family: var(--font-heading, system-ui, sans-serif);
   }
 }
+
+/* ===========================================================================
+   STYLE PRESETS
+   The premium design system is keyed off ONE attribute that
+   src/app/layout.tsx sets from Sanity (Site Settings > Brand theme > Style
+   preset):  <html data-style="classic | warm-editorial | soft-luxe">
+   "classic" deliberately has NO rules here: it is the original look,
+   untouched. Each preset block below overrides CSS variables (derived from
+   the client's five brand colors, so they work for ANY client) plus a few
+   semantic hooks. Removing a block, or flipping the Sanity dropdown back,
+   fully reverts that look. The floating switcher on preview deployments
+   flips the same attribute for live A/B demos.
+   These blocks are intentionally NOT inside a cascade @layer: unlayered
+   rules beat Tailwind's layered utilities, which is what lets a preset
+   restyle existing utility-classed markup without touching components.
+   =========================================================================== */

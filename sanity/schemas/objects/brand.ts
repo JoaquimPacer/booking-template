@@ -10,6 +10,22 @@ export const brand = defineType({
   type: "object",
   fields: [
     defineField({
+      name: "stylePreset",
+      title: "Style preset",
+      type: "string",
+      description:
+        "Switches the whole site's design style in one click. Classic is the original look. Safe to change and change back; your content is never affected.",
+      options: {
+        list: [
+          { title: "Classic (original look)", value: "classic" },
+          { title: "Warm Editorial (premium A)", value: "warm-editorial" },
+          { title: "Soft Luxe (premium B)", value: "soft-luxe" },
+        ],
+        layout: "radio",
+      },
+      initialValue: "classic",
+    }),
+    defineField({
       name: "primaryColor",
       title: "Primary color",
       type: "color",
