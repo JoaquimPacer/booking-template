@@ -43,6 +43,7 @@ Work top to bottom. Most steps are one-time per client.
 - [ ] In Vercel: **Settings > Domains > Add** their domain (e.g. `theirbusiness.com`).
 - [ ] At their **registrar / DNS host**: add the DNS records **exactly as Vercel shows them** (currently apex A `216.198.79.1` and `www` CNAME `cname.vercel-dns.com`; Vercel may display newer values, use those). Vercel auto-issues SSL. Do **not** change nameservers (keeps their email intact) unless you're moving DNS to Cloudflare per section 2.
 - [ ] DNS propagation: 15 min - a few hours (up to 48). Verify the domain serves the site over HTTPS.
+- [ ] Add **both** apex and `www` in Vercel; Vercel serves one as primary and redirects the other automatically (e.g. theresaattea.com 307s to www). Make the primary match `NEXT_PUBLIC_SITE_URL` so canonical URLs agree.
 - [ ] **Run the quality audits (target 90+ on mobile and desktop):** PageSpeed Insights (pagespeed.web.dev) for performance and Core Web Vitals (runs on Google's servers, not your laptop, and shows real-user field data; take the median of a few runs), Lighthouse for the category breakdown, and the Rich Results Test (search.google.com/test/rich-results) for structured data. Lighthouse and PSI are Chromium-only; for Safari, spot-check on a real iPhone (or WebPageTest).
 - [ ] Re-confirm the preview login wall is off / production is public.
 
