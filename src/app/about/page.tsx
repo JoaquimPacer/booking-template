@@ -56,7 +56,8 @@ export default async function AboutPage() {
       <section className="border-b border-border/60 bg-muted/40">
         <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
           <header>
-            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+            <p className="eyebrow">Our story</p>
+            <h1 className="page-title text-4xl font-bold tracking-tight md:text-5xl">
               {aboutPage?.title ?? "About"}
             </h1>
           </header>

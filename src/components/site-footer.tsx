@@ -17,7 +17,7 @@ export async function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-border bg-background py-12">
+    <footer className="site-footer mt-16 border-t border-border bg-background py-12">
       <div className="container mx-auto grid grid-cols-1 gap-8 px-4 md:grid-cols-3">
         <div>
           <h3 className="text-base font-semibold">{siteName}</h3>
@@ -51,7 +51,7 @@ export async function SiteFooter() {
         </div>
 
         <div>
-          <h3 className="text-base font-semibold">Visit</h3>
+          <h3 className="footer-heading text-base font-semibold">Visit</h3>
           {contact?.address && (
             <p className="mt-2 whitespace-pre-line text-sm text-foreground/70">{contact.address}</p>
           )}
@@ -71,7 +71,7 @@ export async function SiteFooter() {
         </div>
 
         <div>
-          <h3 className="text-base font-semibold">Links</h3>
+          <h3 className="footer-heading text-base font-semibold">Links</h3>
           <nav className="mt-2 flex flex-col gap-1 text-sm">
             {footerNavItems.map((item) => (
               <Link key={item._id} href={item.href} className="text-foreground/70 hover:text-foreground">

@@ -26,7 +26,7 @@ export function TestimonialCard({ testimonial }: TestimonialCardProps) {
               key={i}
               className={
                 i < rating
-                  ? "size-4 fill-yellow-400 text-yellow-400"
+                  ? "star-filled size-4 fill-yellow-400 text-yellow-400"
                   : "size-4 text-foreground/20"
               }
             />

@@ -55,7 +55,8 @@ export default async function FaqPage() {
       <section className="border-b border-border/60 bg-muted/40">
         <div className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
           <header>
-            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+            <p className="eyebrow">Good to know</p>
+            <h1 className="page-title text-4xl font-bold tracking-tight md:text-5xl">
               Frequently asked questions
             </h1>
             <p className="mt-4 text-base text-foreground/70">

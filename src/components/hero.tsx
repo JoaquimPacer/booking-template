@@ -91,14 +91,14 @@ export function Hero({
       />
       <div className="container mx-auto max-w-3xl px-4 py-24 text-center">
         <h1
-          className="text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
+          className="hero-title text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
           style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
         >
           {title}
         </h1>
         {subtitle && (
           <p
-            className="mx-auto mt-6 max-w-2xl text-balance text-xl text-background/90 md:text-2xl"
+            className="hero-subtitle mx-auto mt-6 max-w-2xl text-balance text-xl text-background/90 md:text-2xl"
             style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
           >
             {subtitle}

@@ -85,7 +85,7 @@ export default async function HomePage() {
             )}
             <div className="order-2 md:order-1">
               {siteSettings?.homeIntroHeading && (
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
                   {siteSettings.homeIntroHeading}
                 </h2>
               )}
@@ -122,7 +122,8 @@ export default async function HomePage() {
         <section className="bg-muted/40 py-16 md:py-24">
           <div className="container mx-auto px-4">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            <p className="eyebrow">What we offer</p>
+            <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
               Our services
             </h2>
             <p className="mt-4 text-base text-foreground/70">
@@ -158,7 +159,8 @@ export default async function HomePage() {
         <section className="border-t border-border py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <p className="eyebrow">Kind words</p>
+              <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
                 What clients are saying
               </h2>
               <p className="mt-4 text-base text-foreground/70">
@@ -177,7 +179,8 @@ export default async function HomePage() {
       {/* Final CTA */}
       <section className="bg-muted/40 py-16 md:py-24">
         <div className="container mx-auto max-w-2xl px-4 text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+          <p className="eyebrow">Get started</p>
+          <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
             Ready to book?
           </h2>
           <p className="mt-4 text-base text-foreground/70">

@@ -172,3 +172,84 @@ html[data-style="warm-editorial"] ::selection,
 html[data-style="soft-luxe"] ::selection {
   background: color-mix(in oklab, var(--primary) 22%, transparent);
 }
+
+/* ---- Shared by both premium presets: editorial typography ----
+   The type SCALE changes; the font FAMILY stays whatever the client picked in
+   Sanity. clamp(min, preferred, max) = fluid sizing that grows with the
+   viewport, no breakpoint jumps. Headings keep font-bold: several of the
+   loaded serifs only ship 400/700 weights, and a missing weight would be
+   faux-bolded by the browser. */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) :is(h1, h2, h3) {
+  text-wrap: balance; /* avoids one-word orphan lines in headings */
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) p {
+  text-wrap: pretty;
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .hero-title {
+  font-size: clamp(2.75rem, 1.4rem + 5vw, 4.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .hero-subtitle {
+  font-size: clamp(1.0625rem, 1rem + 0.5vw, 1.25rem);
+  line-height: 1.6;
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .page-title {
+  font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .section-title {
+  font-size: clamp(1.9rem, 1.45rem + 1.8vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+/* Eyebrow labels: invisible in Classic, small tracked-out kickers above
+   headings in the premium presets. Primary (sage), not accent (gold):
+   small text needs the stronger contrast against the cream background. */
+.eyebrow {
+  display: none;
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .eyebrow {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+/* Long-form (prose) text: warm the grays to brand tints and restore a
+   comfortable ~65-character reading measure. */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .prose {
+  max-width: 65ch;
+  --tw-prose-body: color-mix(in oklab, var(--foreground) 88%, var(--background));
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-bullets: color-mix(in oklab, var(--foreground) 45%, var(--background));
+  --tw-prose-counters: color-mix(in oklab, var(--foreground) 45%, var(--background));
+}
+
+/* Footer becomes a flush tinted band with small-caps column headings. */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .site-footer {
+  margin-top: 0;
+  border-top-color: transparent;
+  background-color: color-mix(in oklab, var(--background) 90%, var(--primary));
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .footer-heading {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--foreground) 65%, var(--background));
+}
+
+/* Testimonial stars use the brand accent (e.g. her gold) instead of stock yellow. */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .star-filled {
+  fill: var(--accent);
+  color: var(--accent);
+}
