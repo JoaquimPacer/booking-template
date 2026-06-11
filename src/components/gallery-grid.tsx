@@ -2,6 +2,7 @@
 // nothing if no images are passed.
 
 import Image from "next/image";
+import { Reveal } from "@/components/reveal";
 import { urlFor } from "@/lib/sanity-image";
 import type { SanityImage } from "@/lib/sanity-queries";
 
@@ -16,9 +17,11 @@ export function GalleryGrid({ images, heading = "Gallery" }: GalleryGridProps) {
   return (
     <section className="border-t border-border bg-muted/30 py-20">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">{heading}</h2>
-        </div>
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">{heading}</h2>
+          </div>
+        </Reveal>
         <div className="mt-12 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
           {images.map((img, i) => {
             const url = urlFor(img)?.width(800).height(800).fit("crop").auto("format").url();

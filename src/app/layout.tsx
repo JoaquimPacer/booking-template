@@ -111,6 +111,13 @@ export default async function RootLayout({
     >
       <head>
         <BrandTheme siteSettings={siteSettings} />
+        {/* Pre-paint JS marker: scroll-reveal styles only apply when this is
+            set, so content is never hidden for crawlers or no-JS visitors. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.setAttribute('data-js','')",
+          }}
+        />
       </head>
       <body
         className="flex min-h-full flex-col bg-background text-foreground"

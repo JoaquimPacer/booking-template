@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { Hero } from "@/components/hero";
 import { JsonLd } from "@/components/json-ld";
+import { Reveal } from "@/components/reveal";
 import { ServiceCard } from "@/components/service-card";
 import { TestimonialCard } from "@/components/testimonial-card";
 import { urlFor } from "@/lib/sanity-image";
@@ -70,6 +71,7 @@ export default async function HomePage() {
       {/* About preview section */}
       {(siteSettings?.homeIntroHeading || siteSettings?.homeIntroBody || primaryInstructor) && (
         <section className="container mx-auto px-4 py-16 md:py-24">
+          <Reveal>
           <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-12">
             {primaryInstructor?.photo && (
               <div className="order-1 md:order-2">
@@ -114,6 +116,7 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
+          </Reveal>
         </section>
       )}
 
@@ -121,18 +124,22 @@ export default async function HomePage() {
       {services.length > 0 && (
         <section className="bg-muted/40 py-16 md:py-24">
           <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="eyebrow">What we offer</p>
-            <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
-              Our services
-            </h2>
-            <p className="mt-4 text-base text-foreground/70">
-              Book directly online. Find a time that works for you.
-            </p>
-          </div>
+          <Reveal>
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="eyebrow">What we offer</p>
+              <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
+                Our services
+              </h2>
+              <p className="mt-4 text-base text-foreground/70">
+                Book directly online. Find a time that works for you.
+              </p>
+            </div>
+          </Reveal>
           <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.slice(0, 6).map((service) => (
-              <ServiceCard key={service._id} service={service} />
+            {services.slice(0, 6).map((service, i) => (
+              <Reveal key={service._id} delay={i * 75} className="h-full">
+                <ServiceCard service={service} />
+              </Reveal>
             ))}
           </div>
           {services.length > 6 && (
@@ -158,18 +165,22 @@ export default async function HomePage() {
       {testimonials.length > 0 && (
         <section className="border-t border-border py-16 md:py-24">
           <div className="container mx-auto px-4">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="eyebrow">Kind words</p>
-              <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
-                What clients are saying
-              </h2>
-              <p className="mt-4 text-base text-foreground/70">
-                Real reviews from real people.
-              </p>
-            </div>
+            <Reveal>
+              <div className="mx-auto max-w-2xl text-center">
+                <p className="eyebrow">Kind words</p>
+                <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
+                  What clients are saying
+                </h2>
+                <p className="mt-4 text-base text-foreground/70">
+                  Real reviews from real people.
+                </p>
+              </div>
+            </Reveal>
             <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {testimonials.slice(0, 6).map((testimonial) => (
-                <TestimonialCard key={testimonial._id} testimonial={testimonial} />
+              {testimonials.slice(0, 6).map((testimonial, i) => (
+                <Reveal key={testimonial._id} delay={i * 75} className="h-full">
+                  <TestimonialCard testimonial={testimonial} />
+                </Reveal>
               ))}
             </div>
           </div>
@@ -179,21 +190,23 @@ export default async function HomePage() {
       {/* Final CTA */}
       <section className="bg-muted/40 py-16 md:py-24">
         <div className="container mx-auto max-w-2xl px-4 text-center">
-          <p className="eyebrow">Get started</p>
-          <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
-            Ready to book?
-          </h2>
-          <p className="mt-4 text-base text-foreground/70">
-            Browse our services and find an open time today.
-          </p>
-          <div className="mt-8">
-            <Link
-              href="/services"
-              className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
-            >
-              See services
-            </Link>
-          </div>
+          <Reveal>
+            <p className="eyebrow">Get started</p>
+            <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
+              Ready to book?
+            </h2>
+            <p className="mt-4 text-base text-foreground/70">
+              Browse our services and find an open time today.
+            </p>
+            <div className="mt-8">
+              <Link
+                href="/services"
+                className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
+              >
+                See services
+              </Link>
+            </div>
+          </Reveal>
         </div>
       </section>
     </>
