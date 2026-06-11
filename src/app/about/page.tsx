@@ -40,7 +40,7 @@ export default async function AboutPage() {
   const description = siteSettings?.description;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-16 md:py-24">
+    <>
       <JsonLd
         data={buildBreadcrumbListJsonLd([
           { name: "Home", path: "/" },
@@ -51,24 +51,31 @@ export default async function AboutPage() {
         <JsonLd key={instructor._id} data={buildPersonJsonLd(instructor)} />
       ))}
 
-      <header>
-        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-          {aboutPage?.title ?? "About"}
-        </h1>
-      </header>
+      {/* Tinted page-header band: carries the homepage's section treatment
+          onto interior pages so they don't read as bare white. */}
+      <section className="border-b border-border/60 bg-muted/40">
+        <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
+          <header>
+            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+              {aboutPage?.title ?? "About"}
+            </h1>
+          </header>
+        </div>
+      </section>
 
+      <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
       {Boolean(aboutPage?.body) ? (
-        <div className="prose prose-slate mt-8 max-w-none">
+        <div className="prose prose-slate max-w-none">
           <PortableText value={aboutPage!.body as PortableTextBlock[]} />
         </div>
       ) : (
         description && (
-          <p className="mt-6 text-lg text-foreground/80">{description}</p>
+          <p className="text-lg text-foreground/80">{description}</p>
         )
       )}
 
       {instructors.length > 0 && (
-        <section className="mt-16">
+        <section className={Boolean(aboutPage?.body) || description ? "mt-16" : ""}>
           <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Meet the team
           </h2>
@@ -121,6 +128,7 @@ export default async function AboutPage() {
           </div>
         </section>
       )}
-    </div>
+      </div>
+    </>
   );
 }

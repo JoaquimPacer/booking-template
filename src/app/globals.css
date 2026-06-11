@@ -151,3 +151,24 @@
    rules beat Tailwind's layered utilities, which is what lets a preset
    restyle existing utility-classed markup without touching components.
    =========================================================================== */
+
+/* ---- Shared by both premium presets: derived warm neutrals ----
+   Stock shadcn neutrals (--muted, --border, --ring, ...) are cool grays that
+   clash with a warm brand palette and read "default template." Derive them
+   from the client's own brand colors instead. color-mix resolves at
+   computed-value time, so these follow whatever BrandTheme injects for ANY
+   client; no new Sanity color fields needed. */
+html[data-style="warm-editorial"],
+html[data-style="soft-luxe"] {
+  --muted: color-mix(in oklab, var(--secondary) 45%, var(--background));
+  --muted-foreground: color-mix(in oklab, var(--foreground) 62%, var(--background));
+  --border: color-mix(in oklab, var(--foreground) 14%, var(--background));
+  --input: color-mix(in oklab, var(--foreground) 14%, var(--background));
+  --ring: color-mix(in oklab, var(--primary) 60%, var(--background));
+}
+
+/* Brand-tinted text selection (replaces the default blue highlight). */
+html[data-style="warm-editorial"] ::selection,
+html[data-style="soft-luxe"] ::selection {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+}

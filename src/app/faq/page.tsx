@@ -42,7 +42,7 @@ export default async function FaqPage() {
   const categories = Object.keys(grouped);
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-16 md:py-24">
+    <>
       <JsonLd data={buildFaqPageJsonLd(faqs)} />
       <JsonLd
         data={buildBreadcrumbListJsonLd([
@@ -50,22 +50,29 @@ export default async function FaqPage() {
           { name: "FAQ", path: "/faq" },
         ])}
       />
-      <header>
-        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-          Frequently asked questions
-        </h1>
-        <p className="mt-4 text-base text-foreground/70">
-          Find quick answers below. If you don&rsquo;t see what you&rsquo;re
-          looking for, get in touch.
-        </p>
-      </header>
+      {/* Tinted page-header band: carries the homepage's section treatment
+          onto interior pages so they don't read as bare white. */}
+      <section className="border-b border-border/60 bg-muted/40">
+        <div className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
+          <header>
+            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+              Frequently asked questions
+            </h1>
+            <p className="mt-4 text-base text-foreground/70">
+              Find quick answers below. If you don&rsquo;t see what you&rsquo;re
+              looking for, get in touch.
+            </p>
+          </header>
+        </div>
+      </section>
 
+      <div className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
       {faqs.length === 0 ? (
-        <div className="mt-16 text-center text-foreground/60">
+        <div className="text-center text-foreground/60">
           <p>No FAQs published yet.</p>
         </div>
       ) : (
-        <div className="mt-12 space-y-12">
+        <div className="space-y-12">
           {categories.map((category) => (
             <section key={category}>
               {categories.length > 1 && (
@@ -89,6 +96,7 @@ export default async function FaqPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

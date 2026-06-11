@@ -29,7 +29,7 @@ export default async function ContactPage() {
   const contact = siteSettings?.contact;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-16 md:py-24">
+    <>
       <JsonLd data={buildLocalBusinessJsonLd(siteSettings)} />
       <JsonLd
         data={buildBreadcrumbListJsonLd([
@@ -37,16 +37,23 @@ export default async function ContactPage() {
           { name: "Contact", path: "/contact" },
         ])}
       />
-      <header>
-        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-          Get in touch
-        </h1>
-        <p className="mt-4 text-base text-foreground/70">
-          Reach out by phone, email, or stop by during business hours.
-        </p>
-      </header>
+      {/* Tinted page-header band: carries the homepage's section treatment
+          onto interior pages so they don't read as bare white. */}
+      <section className="border-b border-border/60 bg-muted/40">
+        <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
+          <header>
+            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+              Get in touch
+            </h1>
+            <p className="mt-4 text-base text-foreground/70">
+              Reach out by phone, email, or stop by during business hours.
+            </p>
+          </header>
+        </div>
+      </section>
 
-      <div className="mt-12 grid grid-cols-1 gap-12 md:grid-cols-2">
+      <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
+      <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
         <div className="space-y-6">
           {contact?.address && (
             <div className="flex gap-4">
@@ -139,6 +146,7 @@ export default async function ContactPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
