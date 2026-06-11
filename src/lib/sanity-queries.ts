@@ -76,6 +76,8 @@ export type SeoFields = {
 export type SanityImage = {
   _type: "image";
   asset: { _ref: string; _type: "reference" };
+  /** Editor-written description (alt text) for accessibility + image SEO. */
+  alt?: string;
 };
 
 // @sanity/color-input returns an object like { hex: "#0ea5e9", hsl: {...}, rgb: {...}, alpha: 1 }
@@ -185,7 +187,7 @@ export async function getNavItems(
 
 export async function getAllServices(): Promise<Service[]> {
   return sanity.fetch<Service[]>(
-    groq`*[_type == "service" && isActive != false] | order(orderRank asc, order asc) { _id, title, slug, tagline, description, durationMinutes, priceCents, bookingUrl, options[]{label, durationMinutes, priceCents, bookingUrl}, bookingMode, heroImage, order, isActive }`,
+    groq`*[_type == "service" && isActive != false] | order(orderRank asc, order asc) { _id, title, slug, tagline, description, durationMinutes, priceCents, bookingUrl, options[]{label, durationMinutes, priceCents, bookingUrl}, bookingMode, heroImage, order, isActive, seo }`,
     {},
     { next: { revalidate: REVALIDATE_SECONDS } },
   );

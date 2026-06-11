@@ -20,6 +20,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StyleSwitcher } from "@/components/style-switcher";
 import { getSiteSettings } from "@/lib/sanity-queries";
 import { urlFor } from "@/lib/sanity-image";
+import { getSiteUrl } from "@/lib/seo";
 
 // Preload the curated set of Google Fonts available in Sanity's font dropdown.
 // Each gets its own CSS variable; we pick which one to apply at render time
@@ -76,6 +77,8 @@ export async function generateMetadata(): Promise<Metadata> {
     ? urlFor(settings.brand.favicon)?.width(64).height(64).url()
     : null;
   return {
+    // Base URL for resolving relative OG-image and canonical URLs to absolute.
+    metadataBase: new URL(getSiteUrl()),
     title: {
       default: settings?.defaultSeo?.metaTitle ?? settings?.name ?? "Booking",
       template: `%s | ${settings?.name ?? "Booking"}`,

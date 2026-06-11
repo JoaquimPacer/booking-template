@@ -144,7 +144,21 @@ export const siteSettings = defineType({
       name: "homeGallery",
       title: "Gallery images",
       type: "array",
-      of: [{ type: "image", options: { hotspot: true } }],
+      of: [
+        {
+          type: "image",
+          options: { hotspot: true },
+          fields: [
+            {
+              name: "alt",
+              type: "string",
+              title: "Describe this photo (alt text)",
+              description:
+                "One short sentence, e.g. 'Massage table by the window with soft lighting'. Helps Google understand the photo and screen readers describe it.",
+            },
+          ],
+        },
+      ],
       description: "Optional. 3-6 images shown in a grid on the homepage (the space, atmosphere, etc.).",
       validation: (r) => r.max(8),
       group: "homepage",

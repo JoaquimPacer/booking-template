@@ -33,7 +33,7 @@ export function GalleryGrid({ images, heading = "Gallery" }: GalleryGridProps) {
               >
                 <Image
                   src={url}
-                  alt={`Gallery image ${i + 1}`}
+                  alt={img.alt ?? `Gallery image ${i + 1}`}
                   fill
                   sizes="(min-width: 768px) 33vw, 50vw"
                   className="object-cover transition-transform duration-300 hover:scale-105"

@@ -190,7 +190,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
                   <Image
                     key={i}
                     src={url}
-                    alt={`${service.title} ${i + 1}`}
+                    alt={img.alt ?? `${service.title} ${i + 1}`}
                     width={600}
                     height={600}
                     className="gallery-photo aspect-square rounded-lg object-cover"
