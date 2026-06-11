@@ -84,9 +84,11 @@ export function Hero({
           />
         )}
       </div>
+      {/* Overlay color/gradient comes from .hero-overlay in globals.css (preset-
+          aware); only the strength is passed through as a custom property. */}
       <div
-        className="absolute inset-0 -z-10"
-        style={{ backgroundColor: `rgba(0, 0, 0, ${overlayAlpha})` }}
+        className="hero-overlay absolute inset-0 -z-10"
+        style={{ ["--hero-overlay-alpha" as string]: overlayAlpha }}
         aria-hidden="true"
       />
       <div className="container mx-auto max-w-3xl px-4 py-24 text-center">

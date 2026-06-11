@@ -79,7 +79,7 @@ export default async function HomePage() {
                   width={600}
                   height={600}
                   sizes="(max-width: 768px) 90vw, 600px"
-                  className="aspect-square w-full rounded-2xl object-cover"
+                  className="about-portrait aspect-square w-full rounded-2xl object-cover"
                 />
               </div>
             )}

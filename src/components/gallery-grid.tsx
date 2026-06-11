@@ -26,7 +26,7 @@ export function GalleryGrid({ images, heading = "Gallery" }: GalleryGridProps) {
             return (
               <div
                 key={i}
-                className="relative aspect-square overflow-hidden rounded-lg bg-background"
+                className="gallery-tile relative aspect-square overflow-hidden rounded-lg bg-background"
               >
                 <Image
                   src={url}

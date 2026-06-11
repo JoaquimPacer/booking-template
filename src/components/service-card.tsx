@@ -39,7 +39,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
     : formatPriceCents(service.priceCents);
 
   return (
-    <Card className="group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
+    <Card className="service-card group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
       {/* Stretched link: covers the whole card (image included) and navigates to
           the detail page. z-10 so it sits ABOVE the relative image container,
           which otherwise swallows clicks on the photo. No other interactive
@@ -60,15 +60,11 @@ export function ServiceCard({ service }: ServiceCardProps) {
             alt={service.title}
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="card-image object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div
-            className="flex h-full w-full items-center justify-center"
-            style={{
-              backgroundImage:
-                "linear-gradient(135deg, var(--brand-primary, #4f6b5d), var(--brand-secondary, #e6e0d6))",
-            }}
+            className="card-placeholder flex h-full w-full items-center justify-center"
             aria-hidden="true"
           >
             <Flower2 className="size-10 text-background/70" />

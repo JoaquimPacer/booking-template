@@ -253,3 +253,96 @@ html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .star-filled {
   fill: var(--accent);
   color: var(--accent);
 }
+
+/* ---- Component support rules (ALL presets) ----
+   These reproduce the exact values that used to live inline in the
+   components, so Classic is pixel-identical; they exist as classes only so
+   the preset blocks below can restyle them. */
+.hero-overlay {
+  background: rgb(0 0 0 / var(--hero-overlay-alpha, 0.35));
+}
+.banner-overlay {
+  background: rgb(0 0 0 / 0.4);
+}
+.card-placeholder {
+  background-image: linear-gradient(135deg, var(--brand-primary, #4f6b5d), var(--brand-secondary, #e6e0d6));
+}
+
+/* ---- Soft Luxe only: atmosphere (tinted scrims, soft depth, slower zooms) ---- */
+html[data-style="soft-luxe"] {
+  --elevation-1:
+    0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
+    0 10px 30px -12px color-mix(in oklab, var(--foreground) 14%, transparent);
+  --elevation-2:
+    0 2px 4px color-mix(in oklab, var(--foreground) 7%, transparent),
+    0 18px 44px -14px color-mix(in oklab, var(--foreground) 20%, transparent);
+}
+
+/* Hero/banner scrims: bottom-weighted gradients tinted toward the brand
+   primary instead of a flat black veil. The Sanity overlay-opacity field
+   still controls overall strength. */
+html[data-style="soft-luxe"] .hero-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / calc(var(--hero-overlay-alpha, 0.35) * 0.55)),
+    rgb(0 0 0 / var(--hero-overlay-alpha, 0.35)) 55%,
+    color-mix(in oklab, var(--primary) 32%, rgb(0 0 0 / var(--hero-overlay-alpha, 0.35)))
+  );
+}
+html[data-style="soft-luxe"] .banner-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.18),
+    rgb(0 0 0 / 0.45) 70%,
+    color-mix(in oklab, var(--primary) 30%, rgb(0 0 0 / 0.5))
+  );
+}
+
+/* Cards: soft layered shadow at rest, gentle 2px lift on hover, slower
+   ease-out image zoom. */
+html[data-style="soft-luxe"] .service-card {
+  box-shadow: var(--elevation-1);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+html[data-style="soft-luxe"] .service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elevation-2);
+}
+html[data-style="soft-luxe"] .card-image {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html[data-style="soft-luxe"] .group:hover .card-image {
+  transform: scale(1.03);
+}
+
+/* Imageless-card placeholder: quiet tonal gradient instead of the loud
+   primary-to-secondary one; icon darkens so it stays visible. */
+html[data-style="soft-luxe"] .card-placeholder {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--background) 88%, var(--primary)),
+    var(--secondary)
+  );
+}
+html[data-style="soft-luxe"] .card-placeholder svg {
+  color: color-mix(in oklab, var(--primary) 60%, var(--background));
+}
+
+/* Gallery + portraits: unified larger radius, soft shadow, slower zoom. */
+html[data-style="soft-luxe"] .gallery-tile {
+  border-radius: calc(var(--radius) * 1.4);
+  box-shadow: var(--elevation-1);
+}
+html[data-style="soft-luxe"] .gallery-tile img {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html[data-style="soft-luxe"] .gallery-tile:hover img {
+  transform: scale(1.03);
+}
+html[data-style="soft-luxe"] .gallery-photo {
+  border-radius: calc(var(--radius) * 1.4);
+  box-shadow: var(--elevation-1);
+}
+html[data-style="soft-luxe"] .about-portrait {
+  box-shadow: var(--elevation-2);
+}

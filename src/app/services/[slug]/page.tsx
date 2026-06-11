@@ -98,7 +98,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
             }}
           />
         )}
-        <div className="absolute inset-0 -z-10 bg-black/40" aria-hidden="true" />
+        <div className="banner-overlay absolute inset-0 -z-10" aria-hidden="true" />
         <div className="container mx-auto max-w-3xl px-4 pb-10 pt-24 text-background">
           <Link
             href="/services"
@@ -107,7 +107,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
             &larr; All services
           </Link>
           <h1
-            className="mt-3 text-4xl font-bold tracking-tight md:text-5xl"
+            className="page-title mt-3 text-4xl font-bold tracking-tight md:text-5xl"
             style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
           >
             {service.title}
@@ -193,7 +193,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
                     alt={`${service.title} ${i + 1}`}
                     width={600}
                     height={600}
-                    className="aspect-square rounded-lg object-cover"
+                    className="gallery-photo aspect-square rounded-lg object-cover"
                   />
                 );
               })}
