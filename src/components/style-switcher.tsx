@@ -13,6 +13,7 @@ const PRESETS = [
   { value: "classic", label: "Classic" },
   { value: "warm-editorial", label: "A · Editorial" },
   { value: "soft-luxe", label: "B · Luxe" },
+  { value: "bold-editorial", label: "C · Bold" },
 ] as const;
 
 const STORAGE_KEY = "style-preset-preview";

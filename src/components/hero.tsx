@@ -55,7 +55,7 @@ export function Hero({
   const variant = ctaVariantFor(ctaStyle);
 
   return (
-    <section className="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-foreground text-background">
+    <section className="hero-section relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-foreground text-background">
       {/* Background media: the image paints immediately (poster + LCP); if a
           video is set, it loads a moment later and fades in over the image. */}
       <div className="absolute inset-0 -z-10">
@@ -91,7 +91,7 @@ export function Hero({
         style={{ ["--hero-overlay-alpha" as string]: overlayAlpha }}
         aria-hidden="true"
       />
-      <div className="container mx-auto max-w-3xl px-4 py-24 text-center">
+      <div className="hero-content container mx-auto max-w-3xl px-4 py-24 text-center">
         <h1
           className="hero-title text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
           style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
