@@ -159,8 +159,7 @@
    computed-value time, so these follow whatever BrandTheme injects for ANY
    client; no new Sanity color fields needed. */
 html[data-style="warm-editorial"],
-html[data-style="soft-luxe"],
-html[data-style="bold-editorial"] {
+html[data-style="soft-luxe"] {
   --muted: color-mix(in oklab, var(--secondary) 45%, var(--background));
   --muted-foreground: color-mix(in oklab, var(--foreground) 62%, var(--background));
   --border: color-mix(in oklab, var(--foreground) 14%, var(--background));
@@ -170,8 +169,7 @@ html[data-style="bold-editorial"] {
 
 /* Brand-tinted text selection (replaces the default blue highlight). */
 html[data-style="warm-editorial"] ::selection,
-html[data-style="soft-luxe"] ::selection,
-html[data-style="bold-editorial"] ::selection {
+html[data-style="soft-luxe"] ::selection {
   background: color-mix(in oklab, var(--primary) 22%, transparent);
 }
 
@@ -181,27 +179,27 @@ html[data-style="bold-editorial"] ::selection {
    viewport, no breakpoint jumps. Headings keep font-bold: several of the
    loaded serifs only ship 400/700 weights, and a missing weight would be
    faux-bolded by the browser. */
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) :is(h1, h2, h3) {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) :is(h1, h2, h3) {
   text-wrap: balance; /* avoids one-word orphan lines in headings */
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) p {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) p {
   text-wrap: pretty;
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .hero-title {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .hero-title {
   font-size: clamp(2.75rem, 1.4rem + 5vw, 4.75rem);
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .hero-subtitle {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .hero-subtitle {
   font-size: clamp(1.0625rem, 1rem + 0.5vw, 1.25rem);
   line-height: 1.6;
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .page-title {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .page-title {
   font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3.5rem);
   line-height: 1.08;
   letter-spacing: -0.015em;
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .section-title {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .section-title {
   font-size: clamp(1.9rem, 1.45rem + 1.8vw, 2.75rem);
   line-height: 1.12;
   letter-spacing: -0.015em;
@@ -213,7 +211,7 @@ html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bo
 .eyebrow {
   display: none;
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .eyebrow {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .eyebrow {
   display: block;
   margin-bottom: 0.75rem;
   font-size: 0.8125rem;
@@ -225,7 +223,7 @@ html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bo
 
 /* Long-form (prose) text: warm the grays to brand tints and restore a
    comfortable ~65-character reading measure. */
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .prose {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .prose {
   max-width: 65ch;
   --tw-prose-body: color-mix(in oklab, var(--foreground) 88%, var(--background));
   --tw-prose-headings: var(--foreground);
@@ -237,12 +235,12 @@ html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bo
 }
 
 /* Footer becomes a flush tinted band with small-caps column headings. */
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .site-footer {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .site-footer {
   margin-top: 0;
   border-top-color: transparent;
   background-color: color-mix(in oklab, var(--background) 90%, var(--primary));
 }
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .footer-heading {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .footer-heading {
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -251,7 +249,7 @@ html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bo
 }
 
 /* Testimonial stars use the brand accent (e.g. her gold) instead of stock yellow. */
-html:is([data-style="warm-editorial"], [data-style="soft-luxe"], [data-style="bold-editorial"]) .star-filled {
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .star-filled {
   fill: var(--accent);
   color: var(--accent);
 }
@@ -349,68 +347,6 @@ html[data-style="soft-luxe"] .gallery-photo {
 }
 html[data-style="soft-luxe"] .about-portrait {
   box-shadow: var(--elevation-2);
-}
-
-/* ---- Bold Editorial only: oversized display type, monochrome photography ----
-   Inspired by the award-site references in booking-flow-pitches/clients/
-   theresa-attea/assets/Website Ideas (TANGAN et al.): a huge serif statement
-   over quiet black-and-white imagery; photos regain color on hover. */
-html[data-style="bold-editorial"] .hero-section {
-  align-items: flex-end;
-  min-height: 86vh;
-}
-html[data-style="bold-editorial"] .hero-content {
-  max-width: 80rem;
-  padding-bottom: 4rem;
-}
-html[data-style="bold-editorial"] .hero-title {
-  font-size: clamp(3rem, 1rem + 9vw, 8rem);
-  line-height: 0.98;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-}
-html[data-style="bold-editorial"] .hero-subtitle {
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  opacity: 0.9;
-}
-html[data-style="bold-editorial"] .hero-overlay {
-  background: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / calc(var(--hero-overlay-alpha, 0.35) * 0.5)),
-    rgb(0 0 0 / calc(var(--hero-overlay-alpha, 0.35) * 1.1))
-  );
-}
-/* Monochrome photography; color returns on interaction. */
-html[data-style="bold-editorial"] :is(.hero-section img, .hero-section video) {
-  filter: grayscale(1) contrast(1.05);
-}
-html[data-style="bold-editorial"] :is(.card-image, .gallery-tile img, .gallery-photo, .about-portrait) {
-  filter: grayscale(1);
-  transition: filter 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-html[data-style="bold-editorial"] .group:hover .card-image,
-html[data-style="bold-editorial"] .gallery-tile:hover img,
-html[data-style="bold-editorial"] .about-portrait:hover {
-  filter: grayscale(0);
-}
-/* Minimal tracked-out navigation */
-html[data-style="bold-editorial"] .site-header nav a {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-/* Headings lean bigger and tighter than Warm Editorial */
-html[data-style="bold-editorial"] .page-title {
-  font-size: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
-  line-height: 1.02;
-}
-html[data-style="bold-editorial"] .section-title {
-  font-size: clamp(2rem, 1.4rem + 2.2vw, 3.25rem);
-  line-height: 1.05;
 }
 
 /* Scroll reveals (Soft Luxe only): sections fade and rise once as they enter

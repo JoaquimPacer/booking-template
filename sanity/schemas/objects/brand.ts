@@ -20,7 +20,6 @@ export const brand = defineType({
           { title: "Classic (original look)", value: "classic" },
           { title: "Warm Editorial (premium A)", value: "warm-editorial" },
           { title: "Soft Luxe (premium B)", value: "soft-luxe" },
-          { title: "Bold Editorial (premium C)", value: "bold-editorial" },
         ],
         layout: "radio",
       },
