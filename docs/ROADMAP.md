@@ -1,9 +1,9 @@
 # Roadmap
 
-## Status (updated 2026-06-10)
+## Status (updated 2026-06-12)
 
-**Now:** 1H, the $10k premium pass (style presets + A/B demo switcher) + SEO closeout + Search Console, on `feature/premium-design`. Started 2026-06-10.
-**Next:** GSC/GBP verification with Joaquim; Theresa handoff items (Sanity invite confirmation, backup drill, Loom); then finish 1.5 (replicate-prospect services/photos) + Newberry targeting; 1.6 operator drills before the first pitch.
+**Now:** 1H continues on `feature/premium-design`: C Bold preset removed (Joaquim's verdict), CTA pill + mobile-drawer polish added to A/B (Classic verified untouched). Awaiting Joaquim's review of preview `theresa-attea-huhflm3xx-...vercel.app`, then merge decision. Shipped alongside in booking-flow-pitches: Reachout tool v2 (as-of banner, suggestion reasons, editable scripts; 128 tests + Playwright-verified) and the Google-review QR sign (decode-verified).
+**Next:** Joaquim's GBP access request (Management, as Agency) + website-link fix + the 2-minute Sanity meta paste (SEO-SETUP.md); GSC verification; Theresa handoff items (Sanity invite confirmation, backup drill, Loom); then finish 1.5 (replicate-prospect services/photos) + Newberry targeting; 1.6 operator drills before the first pitch.
 **Blocked:** Theresa's Canva edit link (4 flyer fixes wait on it).
 **Pace:** theresaattea.com went LIVE ~June 6 (ahead of the doc'd plan); 1E/1F were finished inside the launch push but the docs lagged until 2026-06-10. 2C-2E and Phase 3 re-tagged "deferred until first non-medical client," retiring the stale June 12 Phase-3 date.
 
