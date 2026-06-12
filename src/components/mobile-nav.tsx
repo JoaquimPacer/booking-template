@@ -67,7 +67,7 @@ export function MobileNav({ siteName, navItems, cta }: MobileNavProps) {
               {...(cta.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className={cn(
                 buttonVariants({ variant: cta.variant }),
-                "mt-4 h-auto self-center px-8 py-2.5 text-base",
+                "cta-button mt-4 h-auto self-center px-8 py-2.5 text-base",
               )}
             >
               {cta.label}

@@ -254,6 +254,53 @@ html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .star-filled {
   color: var(--accent);
 }
 
+/* ---- CTA buttons: pill shape, calm motion (premium presets) ----
+   The stock CTA keeps the shadcn default (8px corners, instant hover), which
+   reads "template" next to the editorial type. Components only carry the
+   .cta-button hook (header, hero, mobile drawer); Classic renders them
+   exactly as before. */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .cta-button {
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  transition:
+    background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    box-shadow 0.25s ease, transform 0.25s ease;
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .cta-button:hover {
+  transform: translateY(-1px);
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) .cta-button:active {
+  transform: translateY(0);
+}
+/* Soft Luxe: the hover lift casts a real shadow, like the cards. */
+html[data-style="soft-luxe"] .cta-button {
+  box-shadow: var(--elevation-1);
+}
+html[data-style="soft-luxe"] .cta-button:hover {
+  box-shadow: var(--elevation-2);
+}
+/* The hero outline CTA sits on a photo: a shadow under a transparent
+   button looks like a rendering glitch, so it stays flat. */
+html[data-style="soft-luxe"] .hero-section .cta-button {
+  box-shadow: none;
+}
+
+/* ---- Mobile drawer: breathing room and a deliberate backdrop (premium
+   presets). The stock drawer has NO container padding (content hugs the
+   edges) and a faint 10% backdrop; both read unfinished. ---- */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) [data-slot="sheet-content"] {
+  padding: 1.75rem 1.5rem;
+  border-left-color: color-mix(in oklab, var(--foreground) 10%, var(--background));
+}
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) [data-slot="sheet-overlay"] {
+  background: rgb(0 0 0 / 0.22);
+}
+/* Inside the drawer the CTA becomes a full-width pill, app style. */
+html:is([data-style="warm-editorial"], [data-style="soft-luxe"]) [data-slot="sheet-content"] .cta-button {
+  align-self: stretch;
+  justify-content: center;
+}
+
 /* ---- Component support rules (ALL presets) ----
    These reproduce the exact values that used to live inline in the
    components, so Classic is pixel-identical; they exist as classes only so

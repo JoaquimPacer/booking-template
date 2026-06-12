@@ -116,6 +116,7 @@ export function Hero({
               className={cn(
                 buttonVariants({ variant }),
                 ctaSizeClasses(ctaSize),
+                "cta-button",
                 variant === "outline" &&
                   "border-2 border-background bg-transparent text-background hover:bg-background/10",
               )}

@@ -85,7 +85,7 @@ export async function SiteHeader() {
               // Display classes LAST so tailwind-merge keeps `hidden` over the
               // variant's base `inline-flex` (otherwise the button leaks onto
               // mobile, where the hamburger already covers booking).
-              "shrink-0 max-md:hidden",
+              "cta-button shrink-0 max-md:hidden",
             )}
           >
             {headerCtaLabel}
