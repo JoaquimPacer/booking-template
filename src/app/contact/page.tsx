@@ -16,8 +16,9 @@ export async function generateMetadata() {
   const siteSettings = await getSiteSettings();
   return buildPageMetadata({
     fallback: {
-      title: "Contact",
-      description: `Contact ${siteSettings?.name ?? "us"} by phone, email, or visit us in person.`,
+      title: "Contact and Booking",
+      description:
+        "Reach Theresa Attea, LMT in South Austin. Find hours, location, and the link to book oncology, lymphatic, pregnancy, and therapeutic massage online.",
     },
     path: "/contact",
     siteSettings,

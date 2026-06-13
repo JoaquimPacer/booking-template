@@ -13,8 +13,9 @@ export async function generateMetadata() {
     path: "/services",
     siteSettings,
     fallback: {
-      title: "Services",
-      description: `Browse all services offered by ${siteSettings?.name ?? "us"}.`,
+      title: "Massage Services in South Austin",
+      description:
+        "Explore oncology, lymphatic drainage, craniosacral, pregnancy, pediatric, and therapeutic massage with Theresa Attea, LMT in South Austin. Book online.",
     },
   });
 }

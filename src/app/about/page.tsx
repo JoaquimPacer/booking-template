@@ -23,7 +23,11 @@ export async function generateMetadata() {
   ]);
   return buildPageMetadata({
     seo: aboutPage?.seo,
-    fallback: { title: aboutPage?.title ?? "About" },
+    fallback: {
+      title: "Meet Theresa, Your Massage Therapist",
+      description:
+        "Meet Theresa Attea, LMT: a registered nurse, oncology massage specialist, and two-time cancer survivor offering gentle, skilled bodywork in South Austin.",
+    },
     path: "/about",
     siteSettings,
   });

@@ -8,6 +8,12 @@ export const service = defineType({
   name: "service",
   title: "Service",
   type: "document",
+  groups: [
+    { name: "content", title: "Content", default: true },
+    { name: "booking", title: "Pricing & booking" },
+    { name: "media", title: "Images" },
+    { name: "seo", title: "SEO / Google" },
+  ],
   fields: [
     // Active first, so it's easy to toggle a service on/off without scrolling.
     defineField({
@@ -16,12 +22,14 @@ export const service = defineType({
       type: "boolean",
       description: "Turn off to hide this service from the public site without deleting it.",
       initialValue: true,
+      group: "content",
     }),
     defineField({
       name: "title",
       title: "Service name",
       type: "string",
       validation: (r) => r.required(),
+      group: "content",
     }),
     defineField({
       name: "slug",
@@ -29,6 +37,7 @@ export const service = defineType({
       type: "slug",
       options: { source: "title", maxLength: 96 },
       validation: (r) => r.required(),
+      group: "content",
     }),
     defineField({
       name: "tagline",
@@ -36,6 +45,7 @@ export const service = defineType({
       type: "string",
       description: "Short line shown on service cards. Aim under 80 chars.",
       validation: (r) => r.max(120),
+      group: "content",
     }),
     defineField({
       name: "durationMinutes",
@@ -43,6 +53,7 @@ export const service = defineType({
       type: "number",
       description: "Length of the session in minutes. Used in service cards, detail pages, and time-slot picker. Example: 60 for a one-hour session.",
       validation: (r) => r.positive().integer(),
+      group: "booking",
     }),
     defineField({
       name: "priceCents",
@@ -50,6 +61,7 @@ export const service = defineType({
       type: "number",
       description: "Price in CENTS (multiply dollars by 100). Example: $80 = 8000. Used for display + Stripe checkout. Stored in cents to avoid floating-point money bugs.",
       validation: (r) => r.positive().integer(),
+      group: "booking",
     }),
     defineField({
       name: "bufferMinutes",
@@ -58,6 +70,7 @@ export const service = defineType({
       description: "Extra time reserved after this session before the next booking can start (cleanup, notes, reset). Leave blank or 0 for none. Example: 15.",
       initialValue: 0,
       validation: (r) => r.min(0).integer(),
+      group: "booking",
     }),
     defineField({
       name: "description",
@@ -65,6 +78,7 @@ export const service = defineType({
       type: "text",
       rows: 3,
       description: "Used for SEO meta description fallback.",
+      group: "content",
     }),
     defineField({
       name: "body",
@@ -72,12 +86,14 @@ export const service = defineType({
       type: "array",
       of: [{ type: "block" }, { type: "image" }],
       description: "Shown on the service detail page.",
+      group: "content",
     }),
     defineField({
       name: "heroImage",
       title: "Hero image",
       type: "image",
       options: { hotspot: true },
+      group: "media",
     }),
     defineField({
       name: "gallery",
@@ -98,6 +114,7 @@ export const service = defineType({
           ],
         },
       ],
+      group: "media",
     }),
     defineField({
       name: "whatToExpect",
@@ -105,10 +122,11 @@ export const service = defineType({
       type: "array",
       of: [{ type: "block" }],
       description: "Step-by-step or bulleted list of what the client experiences.",
+      group: "content",
     }),
     // Drag-to-reorder: editors reorder services by dragging them in the
     // Services list (no typing numbers). The plugin stores the position here.
-    orderRankField({ type: "service" }),
+    { ...orderRankField({ type: "service" }), group: "content" },
     // Legacy numeric order, hidden from the form. Kept as a tiebreak so the
     // public site still has a stable order before the first drag.
     defineField({
@@ -117,6 +135,7 @@ export const service = defineType({
       type: "number",
       initialValue: 100,
       hidden: true,
+      group: "content",
     }),
     defineField({
       name: "bookingUrl",
@@ -124,11 +143,13 @@ export const service = defineType({
       type: "url",
       description:
         "Optional. Paste this service's exact JaneApp (or other scheduler) link so the Book button lands right on this treatment. Leave blank to use the site-wide booking link from Site Settings.",
+      group: "booking",
     }),
     defineField({
       name: "options",
       title: "Length / price options",
       type: "array",
+      group: "booking",
       description:
         "Leave empty for a single-price service (it uses the Duration and Price above). Add two or more options to offer different lengths (e.g. 60 and 90 minutes), each with its own price and booking link. When set, these take over and the service page shows a length picker.",
       of: [
@@ -201,11 +222,13 @@ export const service = defineType({
         layout: "radio",
       },
       initialValue: "slots",
+      group: "booking",
     }),
     defineField({
       name: "seo",
       title: "SEO override",
       type: "seo",
+      group: "seo",
     }),
   ],
   preview: {
