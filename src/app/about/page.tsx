@@ -60,7 +60,7 @@ export default async function AboutPage() {
       <section className="border-b border-border/60 bg-muted/40">
         <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
           <header>
-            <p className="eyebrow">Our story</p>
+            <p className="eyebrow">{aboutPage?.storyHeading ?? "My Story"}</p>
             <h1 className="page-title text-4xl font-bold tracking-tight md:text-5xl">
               {aboutPage?.title ?? "About"}
             </h1>
@@ -82,7 +82,7 @@ export default async function AboutPage() {
       {instructors.length > 0 && (
         <section className={Boolean(aboutPage?.body) || description ? "mt-16" : ""}>
           <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Meet the team
+            {aboutPage?.teamHeading ?? "Meet Theresa"}
           </h2>
           <div className="mt-8 grid grid-cols-1 gap-12 md:grid-cols-2">
             {instructors.map((instructor) => {

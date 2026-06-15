@@ -158,6 +158,9 @@ export type Page = {
   title: string;
   slug: { current: string };
   body?: unknown;
+  // About-page section headings (optional; only the /about page uses them).
+  storyHeading?: string;
+  teamHeading?: string;
   seo?: SeoFields;
 };
 

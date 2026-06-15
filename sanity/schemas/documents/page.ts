@@ -30,6 +30,24 @@ export const page = defineType({
         { type: "image", options: { hotspot: true } },
       ],
     }),
+    // About-page section headings. Only used by the /about route; other pages
+    // can leave these blank. The component falls back to a default when unset.
+    defineField({
+      name: "storyHeading",
+      title: "Story heading (About page)",
+      type: "string",
+      description:
+        'Small eyebrow text above the page title on the About page. Defaults to "My Story" if left blank.',
+      initialValue: "My Story",
+    }),
+    defineField({
+      name: "teamHeading",
+      title: "Team heading (About page)",
+      type: "string",
+      description:
+        'Heading above the team / bio section on the About page. Defaults to "Meet Theresa" if left blank.',
+      initialValue: "Meet Theresa",
+    }),
     defineField({
       name: "seo",
       title: "SEO override",
