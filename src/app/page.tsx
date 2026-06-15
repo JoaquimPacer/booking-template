@@ -126,12 +126,13 @@ export default async function HomePage() {
           <div className="container mx-auto px-4">
           <Reveal>
             <div className="mx-auto max-w-2xl text-center">
-              <p className="eyebrow">What we offer</p>
+              <p className="eyebrow">{siteSettings?.servicesEyebrow ?? "What we offer"}</p>
               <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
-                Our services
+                {siteSettings?.servicesHeading ?? "Our services"}
               </h2>
               <p className="mt-4 text-base text-foreground/70">
-                Book directly online. Find a time that works for you.
+                {siteSettings?.servicesSubtitle ??
+                  "Book directly online. Find a time that works for you."}
               </p>
             </div>
           </Reveal>
@@ -148,7 +149,7 @@ export default async function HomePage() {
                 href="/services"
                 className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
               >
-                See all services
+                {siteSettings?.servicesButtonLabel ?? "See all services"}
               </Link>
             </div>
           )}
@@ -167,12 +168,12 @@ export default async function HomePage() {
           <div className="container mx-auto px-4">
             <Reveal>
               <div className="mx-auto max-w-2xl text-center">
-                <p className="eyebrow">Kind words</p>
+                <p className="eyebrow">{siteSettings?.testimonialsEyebrow ?? "Kind words"}</p>
                 <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
-                  What clients are saying
+                  {siteSettings?.testimonialsHeading ?? "What clients are saying"}
                 </h2>
                 <p className="mt-4 text-base text-foreground/70">
-                  Real reviews from real people.
+                  {siteSettings?.testimonialsSubtitle ?? "Real reviews from real people."}
                 </p>
               </div>
             </Reveal>
@@ -191,19 +192,20 @@ export default async function HomePage() {
       <section className="bg-muted/40 py-16 md:py-24">
         <div className="container mx-auto max-w-2xl px-4 text-center">
           <Reveal>
-            <p className="eyebrow">Get started</p>
+            <p className="eyebrow">{siteSettings?.finalCtaEyebrow ?? "Get started"}</p>
             <h2 className="section-title text-3xl font-bold tracking-tight md:text-4xl">
-              Ready to book?
+              {siteSettings?.finalCtaHeading ?? "Ready to book?"}
             </h2>
             <p className="mt-4 text-base text-foreground/70">
-              Browse our services and find an open time today.
+              {siteSettings?.finalCtaSubtitle ??
+                "Browse our services and find an open time today."}
             </p>
             <div className="mt-8">
               <Link
                 href="/services"
                 className={cn(buttonVariants(), "h-auto px-8 py-3 text-base")}
               >
-                See services
+                {siteSettings?.finalCtaButtonLabel ?? "See services"}
               </Link>
             </div>
           </Reveal>

@@ -11,7 +11,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  /* --font-body is set inline in layout.tsx from the client's Sanity body font;
+     --font-geist is the loaded default. Pointing --font-sans at them (instead of
+     the old self-reference `var(--font-sans)`, which resolved to nothing and left
+     `html` on the browser default serif, i.e. Times New Roman) means every
+     `font-sans` consumer falls back to the real body font. */
+  --font-sans: var(--font-body, var(--font-geist));
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -133,6 +138,15 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading, system-ui, sans-serif);
+  }
+  /* Tailwind Typography's `prose` deliberately sets no font-family, so prose
+     body copy (service detail body, What-to-expect, About bio, FAQ answers, and
+     the per-service cancellation-policy accordion) relies on inheriting the site
+     body font. Pin that inheritance explicitly so the accordion text can never
+     drift to a different family than the surrounding page. Visually inert today
+     (prose already inherits the body font); this just removes the fragility. */
+  .prose {
+    font-family: inherit;
   }
 }
 

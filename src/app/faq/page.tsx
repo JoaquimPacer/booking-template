@@ -6,7 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { JsonLd } from "@/components/json-ld";
-import { getAllFaqs, getSiteSettings } from "@/lib/sanity-queries";
+import { getAllFaqs, getPageBySlug, getSiteSettings } from "@/lib/sanity-queries";
 import {
   buildBreadcrumbListJsonLd,
   buildFaqPageJsonLd,
@@ -30,7 +30,10 @@ export async function generateMetadata() {
 }
 
 export default async function FaqPage() {
-  const faqs = await getAllFaqs();
+  const [faqs, faqPage] = await Promise.all([
+    getAllFaqs(),
+    getPageBySlug("faq"),
+  ]);
 
   // Group by category (uncategorized goes under "General").
   const grouped = faqs.reduce<Record<string, typeof faqs>>((acc, faq) => {
@@ -56,13 +59,13 @@ export default async function FaqPage() {
       <section className="border-b border-border/60 bg-muted/40">
         <div className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
           <header>
-            <p className="eyebrow">Good to know</p>
+            <p className="eyebrow">{faqPage?.faqEyebrow ?? "Good to know"}</p>
             <h1 className="page-title text-4xl font-bold tracking-tight md:text-5xl">
-              Frequently asked questions
+              {faqPage?.faqHeading ?? "Frequently asked questions"}
             </h1>
-            <p className="mt-4 text-base text-foreground/70">
-              Find quick answers below. If you don&rsquo;t see what you&rsquo;re
-              looking for, get in touch.
+            <p className="mt-4 whitespace-pre-line text-base text-foreground/70">
+              {faqPage?.faqIntro ??
+                "Find quick answers below. If you don’t see what you’re looking for, get in touch."}
             </p>
           </header>
         </div>

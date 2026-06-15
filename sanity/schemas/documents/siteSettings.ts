@@ -15,6 +15,7 @@ export const siteSettings = defineType({
     { name: "topbar", title: "Top bar" },
     { name: "homepage", title: "Homepage" },
     { name: "booking", title: "Booking" },
+    { name: "pages", title: "Page labels" },
     { name: "contact", title: "Contact & footer" },
     { name: "seo", title: "SEO / Google" },
   ],
@@ -162,6 +163,149 @@ export const siteSettings = defineType({
       description: "Optional. 3-6 images shown in a grid on the homepage (the space, atmosphere, etc.).",
       validation: (r) => r.max(8),
       group: "homepage",
+    }),
+
+    // ---- Homepage section copy ----
+    // Headings, eyebrows, subtitles, and button labels for the three repeating
+    // homepage sections (Services / Testimonials / final call-to-action). Each is
+    // optional with the current wording as its default, so the homepage looks the
+    // same until an editor changes it. The eyebrow lines only show on the premium
+    // presets (they are hidden in Classic by design).
+    defineField({
+      name: "servicesEyebrow",
+      title: "Services section eyebrow",
+      type: "string",
+      description:
+        'Small kicker above the Services heading on the homepage. Defaults to "What we offer". (Only visible on the premium look.)',
+      initialValue: "What we offer",
+      group: "homepage",
+    }),
+    defineField({
+      name: "servicesHeading",
+      title: "Services section heading",
+      type: "string",
+      description: 'Heading of the Services section on the homepage. Defaults to "Our services".',
+      initialValue: "Our services",
+      group: "homepage",
+    }),
+    defineField({
+      name: "servicesSubtitle",
+      title: "Services section subtitle",
+      type: "string",
+      description:
+        'Sentence under the Services heading on the homepage. Defaults to "Book directly online. Find a time that works for you.".',
+      initialValue: "Book directly online. Find a time that works for you.",
+      group: "homepage",
+    }),
+    defineField({
+      name: "servicesButtonLabel",
+      title: 'Services section "see all" button',
+      type: "string",
+      description:
+        'Label of the button under the homepage services grid (only shows when there are more than 6 services). Defaults to "See all services".',
+      initialValue: "See all services",
+      group: "homepage",
+    }),
+    defineField({
+      name: "testimonialsEyebrow",
+      title: "Testimonials section eyebrow",
+      type: "string",
+      description:
+        'Small kicker above the Testimonials heading on the homepage. Defaults to "Kind words". (Only visible on the premium look.)',
+      initialValue: "Kind words",
+      group: "homepage",
+    }),
+    defineField({
+      name: "testimonialsHeading",
+      title: "Testimonials section heading",
+      type: "string",
+      description: 'Heading of the Testimonials section on the homepage. Defaults to "What clients are saying".',
+      initialValue: "What clients are saying",
+      group: "homepage",
+    }),
+    defineField({
+      name: "testimonialsSubtitle",
+      title: "Testimonials section subtitle",
+      type: "string",
+      description:
+        'Sentence under the Testimonials heading on the homepage. Defaults to "Real reviews from real people.".',
+      initialValue: "Real reviews from real people.",
+      group: "homepage",
+    }),
+    defineField({
+      name: "finalCtaEyebrow",
+      title: "Closing section eyebrow",
+      type: "string",
+      description:
+        'Small kicker above the closing "Ready to book?" heading at the bottom of the homepage. Defaults to "Get started". (Only visible on the premium look.)',
+      initialValue: "Get started",
+      group: "homepage",
+    }),
+    defineField({
+      name: "finalCtaHeading",
+      title: "Closing section heading",
+      type: "string",
+      description: 'Heading of the closing section at the bottom of the homepage. Defaults to "Ready to book?".',
+      initialValue: "Ready to book?",
+      group: "homepage",
+    }),
+    defineField({
+      name: "finalCtaSubtitle",
+      title: "Closing section subtitle",
+      type: "string",
+      description:
+        'Sentence under the closing heading on the homepage. Defaults to "Browse our services and find an open time today.".',
+      initialValue: "Browse our services and find an open time today.",
+      group: "homepage",
+    }),
+    defineField({
+      name: "finalCtaButtonLabel",
+      title: "Closing section button",
+      type: "string",
+      description: 'Label of the button in the closing homepage section. Defaults to "See services".',
+      initialValue: "See services",
+      group: "homepage",
+    }),
+
+    // ---- Page labels ----
+    // Shared headings used outside the homepage: the Services LIST page header,
+    // and the section labels that repeat on every individual service page. Each
+    // is optional with its current wording as the default, so nothing changes
+    // until an editor edits it.
+    defineField({
+      name: "servicesPageEyebrow",
+      title: "Services page eyebrow",
+      type: "string",
+      description:
+        'Small kicker above the heading on the main Services list page (/services). Defaults to "What we offer". (Only visible on the premium look.)',
+      initialValue: "What we offer",
+      group: "pages",
+    }),
+    defineField({
+      name: "servicesPageHeading",
+      title: "Services page heading",
+      type: "string",
+      description: 'Big heading on the main Services list page (/services). Defaults to "Services".',
+      initialValue: "Services",
+      group: "pages",
+    }),
+    defineField({
+      name: "whatToExpectHeading",
+      title: '"What to expect" heading',
+      type: "string",
+      description:
+        'Heading above the "what to expect" section on every service page (shows only when that service has the content filled in). Defaults to "What to expect".',
+      initialValue: "What to expect",
+      group: "pages",
+    }),
+    defineField({
+      name: "galleryHeading",
+      title: "Service gallery heading",
+      type: "string",
+      description:
+        'Heading above the photo gallery on a service page (shows only when that service has gallery images). Defaults to "Gallery".',
+      initialValue: "Gallery",
+      group: "pages",
     }),
 
     // ---- Contact & footer ----

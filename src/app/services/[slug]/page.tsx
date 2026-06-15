@@ -187,7 +187,9 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
 
         {Boolean(service.whatToExpect) && (
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold">What to expect</h2>
+            <h2 className="text-2xl font-semibold">
+              {siteSettings?.whatToExpectHeading ?? "What to expect"}
+            </h2>
             <div className="prose prose-slate mt-4 max-w-none">
               <PortableText value={service.whatToExpect as PortableTextBlock[]} />
             </div>
@@ -196,7 +198,9 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
 
         {service.gallery && service.gallery.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold">Gallery</h2>
+            <h2 className="text-2xl font-semibold">
+              {siteSettings?.galleryHeading ?? "Gallery"}
+            </h2>
             <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
               {service.gallery.map((img, i) => {
                 const url = urlFor(img)?.width(600).height(600).fit("crop").url();

@@ -45,6 +45,23 @@ export type SiteSettings = {
   homeIntroHeading?: string;
   homeIntroBody?: string;
   homeGallery?: SanityImage[];
+  // Homepage section copy (headings / eyebrows / subtitles / button labels).
+  servicesEyebrow?: string;
+  servicesHeading?: string;
+  servicesSubtitle?: string;
+  servicesButtonLabel?: string;
+  testimonialsEyebrow?: string;
+  testimonialsHeading?: string;
+  testimonialsSubtitle?: string;
+  finalCtaEyebrow?: string;
+  finalCtaHeading?: string;
+  finalCtaSubtitle?: string;
+  finalCtaButtonLabel?: string;
+  // Shared page labels (Services list page + per-service section headings).
+  servicesPageEyebrow?: string;
+  servicesPageHeading?: string;
+  whatToExpectHeading?: string;
+  galleryHeading?: string;
   contact?: {
     phone?: string;
     email?: string;
@@ -163,8 +180,15 @@ export type Page = {
   // About-page section headings (optional; only the /about page uses them).
   storyHeading?: string;
   teamHeading?: string;
-  // Contact-page intro line (optional; only the /contact page uses it).
+  // Contact-page header copy (optional; only the /contact page uses these).
+  contactEyebrow?: string;
+  contactHeading?: string;
   contactIntro?: string;
+  contactButtonLabel?: string;
+  // FAQ-page header copy (optional; only the /faq page uses these).
+  faqEyebrow?: string;
+  faqHeading?: string;
+  faqIntro?: string;
   seo?: SeoFields;
 };
 

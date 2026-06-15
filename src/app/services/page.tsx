@@ -21,7 +21,10 @@ export async function generateMetadata() {
 }
 
 export default async function ServicesPage() {
-  const services = await getAllServices();
+  const [services, siteSettings] = await Promise.all([
+    getAllServices(),
+    getSiteSettings(),
+  ]);
 
   return (
     <>
@@ -36,9 +39,9 @@ export default async function ServicesPage() {
       <section className="border-b border-border/60 bg-muted/40">
         <div className="container mx-auto px-4 py-12 md:py-16">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="eyebrow">What we offer</p>
+            <p className="eyebrow">{siteSettings?.servicesPageEyebrow ?? "What we offer"}</p>
             <h1 className="page-title text-4xl font-bold tracking-tight md:text-5xl">
-              Services
+              {siteSettings?.servicesPageHeading ?? "Services"}
             </h1>
           </div>
         </div>
