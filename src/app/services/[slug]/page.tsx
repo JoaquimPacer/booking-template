@@ -228,7 +228,7 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
                   {cancellationHeading ?? "Cancellation policy"}
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="prose prose-slate prose-sm max-w-none">
+                  <div className="prose prose-slate max-w-none">
                     <PortableText value={cancellationBlocks} />
                   </div>
                 </AccordionContent>
