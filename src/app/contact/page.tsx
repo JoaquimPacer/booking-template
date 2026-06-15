@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Mail, MapPin, Phone, Clock } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { JsonLd } from "@/components/json-ld";
-import { getSiteSettings } from "@/lib/sanity-queries";
+import { getPageBySlug, getSiteSettings } from "@/lib/sanity-queries";
 import {
   buildBreadcrumbListJsonLd,
   buildLocalBusinessJsonLd,
@@ -26,7 +26,10 @@ export async function generateMetadata() {
 }
 
 export default async function ContactPage() {
-  const siteSettings = await getSiteSettings();
+  const [siteSettings, contactPage] = await Promise.all([
+    getSiteSettings(),
+    getPageBySlug("contact"),
+  ]);
   const contact = siteSettings?.contact;
 
   return (
@@ -48,7 +51,7 @@ export default async function ContactPage() {
               Get in touch
             </h1>
             <p className="mt-4 text-base text-foreground/70">
-              Reach out by phone, email, or stop by during business hours.
+              {contactPage?.contactIntro ?? "Reach out by phone, email, or text."}
             </p>
           </header>
         </div>

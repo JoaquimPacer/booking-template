@@ -48,6 +48,16 @@ export const page = defineType({
         'Heading above the team / bio section on the About page. Defaults to "Meet Theresa" if left blank.',
       initialValue: "Meet Theresa",
     }),
+    // Contact-page intro line. Only used by the /contact route; other pages can
+    // leave this blank. The component falls back to a default when unset.
+    defineField({
+      name: "contactIntro",
+      title: "Intro line (Contact page)",
+      type: "string",
+      description:
+        'Sentence under the "Get in touch" heading on the Contact page. Defaults to "Reach out by phone, email, or text." if left blank.',
+      initialValue: "Reach out by phone, email, or text.",
+    }),
     defineField({
       name: "seo",
       title: "SEO override",

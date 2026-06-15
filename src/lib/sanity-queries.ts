@@ -161,6 +161,8 @@ export type Page = {
   // About-page section headings (optional; only the /about page uses them).
   storyHeading?: string;
   teamHeading?: string;
+  // Contact-page intro line (optional; only the /contact page uses it).
+  contactIntro?: string;
   seo?: SeoFields;
 };
 

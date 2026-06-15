@@ -107,7 +107,7 @@ export default async function HomePage() {
               <div className="mt-8 flex justify-center">
                 <Link
                   href="/about"
-                  className={cn(buttonVariants({ variant: "outline" }), "h-auto px-6 py-3 text-base")}
+                  className={cn(buttonVariants(), "h-auto px-6 py-3 text-base")}
                 >
                   {siteSettings?.name
                     ? `About ${siteSettings.name.split(/[\s,]+/)[0]}`
