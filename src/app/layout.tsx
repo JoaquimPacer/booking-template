@@ -22,34 +22,45 @@ import { getSiteSettings } from "@/lib/sanity-queries";
 import { urlFor } from "@/lib/sanity-image";
 import { getSiteUrl } from "@/lib/seo";
 
-// Preload the curated set of Google Fonts available in Sanity's font dropdown.
-// Each gets its own CSS variable; we pick which one to apply at render time
-// based on siteSettings.brand.headingFont and bodyFont.
+// The curated set of Google Fonts available in Sanity's font dropdown. Each gets
+// its own CSS variable; we pick which one to apply at render time based on
+// siteSettings.brand.headingFont and bodyFont.
+//
+// Only the two fonts that the default "classic" preset actually paints are
+// preloaded (rel=preload font links): the heading font Merriweather and the body
+// font Geist. The rest are loaded on demand and carry preload: false, so they are
+// still fully usable if a client picks them in Sanity, but they no longer emit
+// extra preload links that delay the hero LCP image. A client who switches their
+// heading/body font in Sanity keeps that font (it just loads without a preload
+// hint); if a different default font becomes common, move its preload here.
 const geistSans = Geist({ variable: "--font-geist", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"] });
-const lora = Lora({ variable: "--font-lora", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], preload: false });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"], preload: false });
+const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], preload: false });
+const lora = Lora({ variable: "--font-lora", subsets: ["latin"], preload: false });
 const merriweather = Merriweather({
   variable: "--font-merriweather",
   subsets: ["latin"],
   weight: ["400", "700"],
 });
-const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"] });
+const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"], preload: false });
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
   weight: ["400", "600", "700"],
+  preload: false,
 });
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  preload: false,
 });
 const dmSerif = DM_Serif_Display({
   variable: "--font-dmserif",
   subsets: ["latin"],
   weight: ["400"],
+  preload: false,
 });
 
 // Map Sanity font names to CSS variable names.
