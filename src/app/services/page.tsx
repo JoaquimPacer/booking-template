@@ -40,9 +40,6 @@ export default async function ServicesPage() {
             <h1 className="page-title text-4xl font-bold tracking-tight md:text-5xl">
               Services
             </h1>
-            <p className="mt-4 text-base text-foreground/70">
-              Browse what we offer. Click any service for details and to book.
-            </p>
           </div>
         </div>
       </section>
