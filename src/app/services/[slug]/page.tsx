@@ -4,6 +4,12 @@ import { notFound } from "next/navigation";
 import { Clock } from "lucide-react";
 import { PortableText, type PortableTextBlock } from "@portabletext/react";
 import { ServiceBooking } from "@/components/service-booking";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { JsonLd } from "@/components/json-ld";
 import { urlFor } from "@/lib/sanity-image";
 import { formatDurationMinutes, formatPriceCents } from "@/lib/format";
@@ -66,6 +72,15 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
     .map((o) => o.priceCents)
     .filter((p): p is number => typeof p === "number");
   const fromPrice = optPrices.length ? Math.min(...optPrices) : undefined;
+
+  // Optional cancellation policy. Only render the accordion when the editor has
+  // actually filled it in: a heading, or at least one Portable Text block.
+  const cancellationBlocks = Array.isArray(service.cancellationBody)
+    ? (service.cancellationBody as PortableTextBlock[])
+    : [];
+  const cancellationHeading = service.cancellationHeading?.trim();
+  const hasCancellationPolicy =
+    Boolean(cancellationHeading) || cancellationBlocks.length > 0;
 
   return (
     <article className="pb-20">
@@ -198,6 +213,23 @@ export default async function ServiceDetailPage({ params }: ServicePageProps) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {hasCancellationPolicy && (
+          <div className="mt-12">
+            <Accordion className="w-full">
+              <AccordionItem value="cancellation-policy">
+                <AccordionTrigger className="text-left text-base font-medium">
+                  {cancellationHeading ?? "Cancellation policy"}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="prose prose-slate prose-sm max-w-none">
+                    <PortableText value={cancellationBlocks} />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         )}
 

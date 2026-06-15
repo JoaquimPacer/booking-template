@@ -124,6 +124,27 @@ export const service = defineType({
       description: "Step-by-step or bulleted list of what the client experiences.",
       group: "content",
     }),
+    // Optional cancellation policy. When both are left blank the service page
+    // shows nothing; fill them to add a collapsible policy section (same
+    // accordion the FAQ page uses). Per-service so each treatment can have its
+    // own wording (e.g. oncology gets a gentler illness clause).
+    defineField({
+      name: "cancellationHeading",
+      title: "Cancellation policy heading (optional)",
+      type: "string",
+      description:
+        'Optional. Title shown on the collapsible policy on this service page, e.g. "Cancellation Policy for Oncology Massage". Leave blank to hide the policy entirely.',
+      group: "content",
+    }),
+    defineField({
+      name: "cancellationBody",
+      title: "Cancellation policy text (optional)",
+      type: "array",
+      of: [{ type: "block" }],
+      description:
+        "Optional. The policy itself, shown inside the collapsible section when expanded. Leave blank to hide it.",
+      group: "content",
+    }),
     // Drag-to-reorder: editors reorder services by dragging them in the
     // Services list (no typing numbers). The plugin stores the position here.
     { ...orderRankField({ type: "service" }), group: "content" },

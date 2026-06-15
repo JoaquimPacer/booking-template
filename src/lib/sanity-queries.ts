@@ -118,6 +118,8 @@ export type Service = {
   heroImage?: SanityImage;
   gallery?: SanityImage[];
   whatToExpect?: unknown;
+  cancellationHeading?: string;
+  cancellationBody?: unknown;
   order?: number;
   isActive?: boolean;
   seo?: SeoFields;
