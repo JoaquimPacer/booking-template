@@ -17,9 +17,9 @@ export const brand = defineType({
         "Switches the whole site's design style in one click. Classic is the original look. Safe to change and change back; your content is never affected.",
       options: {
         list: [
-          { title: "Classic (original look)", value: "classic" },
-          { title: "Warm Editorial (premium A)", value: "warm-editorial" },
-          { title: "Soft Luxe (premium B)", value: "soft-luxe" },
+          { title: "A - Classic", value: "classic" },
+          { title: "B - Editorial", value: "warm-editorial" },
+          { title: "C - Luxe", value: "soft-luxe" },
         ],
         layout: "radio",
       },
