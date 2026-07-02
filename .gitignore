@@ -13,6 +13,13 @@
 # testing
 /coverage
 
+# playwright (e2e artifacts, not source)
+/test-results
+/playwright-report
+/.playwright-mcp
+/blob-report
+/playwright/.cache
+
 # local Sanity/DB backup snapshots (safety artifacts, not source)
 /backups
 

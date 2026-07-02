@@ -5,7 +5,7 @@
 // video waits until after first paint, then loads and fades in over the image,
 // so it never blocks the initial page load.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface HeroVideoProps {
@@ -16,6 +16,8 @@ interface HeroVideoProps {
 export function HeroVideo({ src, className }: HeroVideoProps) {
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -45,18 +47,37 @@ export function HeroVideo({ src, className }: HeroVideoProps) {
     return () => events.forEach((e) => window.removeEventListener(e, start));
   }, []);
 
-  if (!mounted) return null;
+  // Drive playback ourselves instead of relying on the autoPlay attribute, so
+  // we can see whether the browser actually allowed it. When the video can
+  // play, we call play() and inspect the promise: if it rejects (Safari blocks
+  // muted autoplay under Low Power Mode or a "Never Auto-Play" site setting),
+  // we unmount the video so Safari's stray play-button overlay never appears
+  // and the poster image stays. Browsers that allow muted autoplay (Chrome,
+  // Firefox, Edge) resolve the promise and are unaffected.
+  const handleCanPlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true; // set as a property, not just an attribute, for autoplay eligibility
+    const attempt = v.play();
+    if (attempt && typeof attempt.then === "function") {
+      attempt.then(() => setReady(true)).catch(() => setBlocked(true));
+    } else {
+      setReady(true);
+    }
+  };
+
+  if (!mounted || blocked) return null;
 
   return (
     <video
+      ref={videoRef}
       src={src}
-      autoPlay
       loop
       muted
       playsInline
       preload="auto"
       aria-hidden="true"
-      onCanPlay={() => setReady(true)}
+      onCanPlay={handleCanPlay}
       className={cn(
         className,
         "transition-opacity duration-700",
