@@ -77,7 +77,8 @@ export const service = defineType({
       title: "Short description",
       type: "text",
       rows: 3,
-      description: "Used for SEO meta description fallback.",
+      description:
+        "Not shown on the page. It's the backup text Google shows under your link in search results, used only if you leave the Meta description (in the SEO / Google tab) blank. Aim 150-160 characters.",
       group: "content",
     }),
     defineField({
