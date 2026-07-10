@@ -49,13 +49,13 @@ export default async function ServicesPage() {
       </section>
 
       <div className="container mx-auto px-4 py-12 md:py-16">
+        {/* 1-2 cards center under the centered page header instead of
+            stranding left in a 3-column grid; 3+ keeps the original layout. */}
         {services.length === 0 ? (
           <div className="text-center text-foreground/60">
             <p>No services available yet.</p>
           </div>
         ) : (
-          {/* 1-2 cards center under the centered page header instead of
-              stranding left in a 3-column grid; 3+ keeps the original layout. */}
           <div
             className={cn(
               "grid grid-cols-1 gap-6",
