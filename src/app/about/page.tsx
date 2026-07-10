@@ -2,6 +2,7 @@ import Image from "next/image";
 import { PortableText, type PortableTextBlock } from "@portabletext/react";
 import { JsonLd } from "@/components/json-ld";
 import { urlFor } from "@/lib/sanity-image";
+import { cn } from "@/lib/utils";
 import {
   getAllInstructors,
   getPageBySlug,
@@ -84,7 +85,15 @@ export default async function AboutPage() {
           <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
             {aboutPage?.teamHeading ?? "Meet Theresa"}
           </h2>
-          <div className="mt-8 grid grid-cols-1 gap-12 md:grid-cols-2">
+          {/* Two columns only when there's more than one team member; a lone
+              bio keeps a readable measure instead of stranding half-width
+              beside an empty column. */}
+          <div
+            className={cn(
+              "mt-8 grid grid-cols-1 gap-12",
+              instructors.length > 1 ? "md:grid-cols-2" : "max-w-2xl",
+            )}
+          >
             {instructors.map((instructor) => {
               const photoUrl = instructor.photo
                 ? urlFor(instructor.photo)?.width(400).height(400).fit("crop").url()
