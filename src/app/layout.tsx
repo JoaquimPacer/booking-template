@@ -12,6 +12,7 @@ import {
   Poppins,
 } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 import { BrandTheme } from "@/components/brand-theme";
@@ -142,6 +143,7 @@ export default async function RootLayout({
         <SiteFooter />
         {showStyleSwitcher ? <StyleSwitcher /> : null}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
