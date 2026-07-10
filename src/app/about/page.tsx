@@ -83,7 +83,7 @@ export default async function AboutPage() {
       {instructors.length > 0 && (
         <section className={Boolean(aboutPage?.body) || description ? "mt-16" : ""}>
           <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {aboutPage?.teamHeading ?? "Meet Theresa"}
+            {aboutPage?.teamHeading ?? "Meet the team"}
           </h2>
           {/* Two columns only when there's more than one team member; a lone
               bio keeps a readable measure instead of stranding half-width
