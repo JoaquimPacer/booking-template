@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { getNavItems, getSiteSettings } from "@/lib/sanity-queries";
+import { cn } from "@/lib/utils";
 
 export async function SiteFooter() {
   const [siteSettings, footerNavItems] = await Promise.all([
@@ -16,9 +17,23 @@ export async function SiteFooter() {
   const footerText = siteSettings?.footerText;
   const year = new Date().getFullYear();
 
+  // Columns render only when they have content, and the grid adapts so an
+  // unconfigured site never shows empty "Visit"/"Links" headings.
+  const hasVisit = Boolean(
+    contact?.address || contact?.hours || contact?.phone || contact?.email,
+  );
+  const hasLinks = footerNavItems.length > 0;
+  const columnCount = 1 + (hasVisit ? 1 : 0) + (hasLinks ? 1 : 0);
+
   return (
     <footer className="site-footer mt-16 border-t border-border bg-background py-12">
-      <div className="container mx-auto grid grid-cols-1 gap-8 px-4 md:grid-cols-3">
+      <div
+        className={cn(
+          "container mx-auto grid grid-cols-1 gap-8 px-4",
+          columnCount === 2 && "md:grid-cols-2",
+          columnCount === 3 && "md:grid-cols-3",
+        )}
+      >
         <div>
           <h3 className="text-base font-semibold">{siteName}</h3>
           {siteSettings?.tagline && (
@@ -50,6 +65,7 @@ export async function SiteFooter() {
           )}
         </div>
 
+        {hasVisit && (
         <div>
           <h3 className="footer-heading text-base font-semibold">Visit</h3>
           {contact?.address && (
@@ -69,7 +85,9 @@ export async function SiteFooter() {
             </p>
           )}
         </div>
+        )}
 
+        {hasLinks && (
         <div>
           <h3 className="footer-heading text-base font-semibold">Links</h3>
           <nav className="mt-2 flex flex-col gap-1 text-sm">
@@ -80,6 +98,7 @@ export async function SiteFooter() {
             ))}
           </nav>
         </div>
+        )}
       </div>
 
       <div className="mt-12 border-t border-border pt-6 text-center text-xs text-foreground/60">

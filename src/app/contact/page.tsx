@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Mail, MapPin, Phone, Clock } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { JsonLd } from "@/components/json-ld";
+import { cn } from "@/lib/utils";
 import { getPageBySlug, getSiteSettings } from "@/lib/sanity-queries";
 import {
   buildBreadcrumbListJsonLd,
@@ -58,7 +59,10 @@ export default async function ContactPage() {
       </section>
 
       <div className="container mx-auto max-w-4xl px-4 py-12 md:py-16">
-      <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
+      {/* Two columns only when there's a map to fill the second one; without
+          it the details read as a single full-width list instead of stranding
+          half-width beside an empty column. */}
+      <div className={cn("grid grid-cols-1 gap-12", contact?.googleMapsUrl && "md:grid-cols-2")}>
         <div className="space-y-6">
           {contact?.address && (
             <div className="flex gap-4">

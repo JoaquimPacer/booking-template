@@ -3,6 +3,7 @@ import { Reveal } from "@/components/reveal";
 import { ServiceCard } from "@/components/service-card";
 import { getAllServices, getSiteSettings } from "@/lib/sanity-queries";
 import { buildBreadcrumbListJsonLd, buildPageMetadata } from "@/lib/seo";
+import { cn } from "@/lib/utils";
 
 // Next.js requires segment config to be a literal; keep in sync with REVALIDATE_SECONDS in src/lib/cache.ts.
 export const revalidate = 10;
@@ -48,12 +49,21 @@ export default async function ServicesPage() {
       </section>
 
       <div className="container mx-auto px-4 py-12 md:py-16">
+        {/* 1-2 cards center under the centered page header instead of
+            stranding left in a 3-column grid; 3+ keeps the original layout. */}
         {services.length === 0 ? (
           <div className="text-center text-foreground/60">
             <p>No services available yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-6",
+              services.length === 1 && "mx-auto max-w-md",
+              services.length === 2 && "mx-auto max-w-3xl sm:grid-cols-2",
+              services.length >= 3 && "sm:grid-cols-2 lg:grid-cols-3",
+            )}
+          >
             {services.map((service, i) => (
               <Reveal key={service._id} delay={(i % 3) * 75} className="h-full">
                 <ServiceCard service={service} />

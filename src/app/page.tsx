@@ -41,6 +41,8 @@ export default async function HomePage() {
     getAllInstructors(),
   ]);
   const primaryInstructor = instructors[0];
+  const shownServices = services.slice(0, 6);
+  const shownTestimonials = testimonials.slice(0, 6);
 
   const heroTitle =
     siteSettings?.tagline ?? siteSettings?.name ?? "Welcome";
@@ -72,7 +74,15 @@ export default async function HomePage() {
       {(siteSettings?.homeIntroHeading || siteSettings?.homeIntroBody || primaryInstructor) && (
         <section className="container mx-auto px-4 py-16 md:py-24">
           <Reveal>
-          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-12">
+          {/* Two-column only when there's a photo to fill the second column;
+              without one the text centers like every other homepage section. */}
+          <div
+            className={cn(
+              primaryInstructor?.photo
+                ? "grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-12"
+                : "mx-auto max-w-2xl text-center",
+            )}
+          >
             {primaryInstructor?.photo && (
               <div className="order-1 md:order-2">
                 <Image
@@ -136,8 +146,17 @@ export default async function HomePage() {
               </p>
             </div>
           </Reveal>
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.slice(0, 6).map((service, i) => (
+          {/* 1-2 cards center under the centered header instead of stranding
+              left in a 3-column grid; 3+ keeps the original layout. */}
+          <div
+            className={cn(
+              "mt-12 grid grid-cols-1 gap-6",
+              shownServices.length === 1 && "mx-auto max-w-md",
+              shownServices.length === 2 && "mx-auto max-w-3xl sm:grid-cols-2",
+              shownServices.length >= 3 && "sm:grid-cols-2 lg:grid-cols-3",
+            )}
+          >
+            {shownServices.map((service, i) => (
               <Reveal key={service._id} delay={i * 75} className="h-full">
                 <ServiceCard service={service} />
               </Reveal>
@@ -177,8 +196,17 @@ export default async function HomePage() {
                 </p>
               </div>
             </Reveal>
-            <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {testimonials.slice(0, 6).map((testimonial, i) => (
+            {/* 1-2 quotes center under the centered header instead of
+                stranding left in a 3-column grid; 3+ keeps the original layout. */}
+            <div
+              className={cn(
+                "mt-12 grid grid-cols-1 gap-6",
+                shownTestimonials.length === 1 && "mx-auto max-w-xl",
+                shownTestimonials.length === 2 && "mx-auto max-w-3xl md:grid-cols-2",
+                shownTestimonials.length >= 3 && "md:grid-cols-2 lg:grid-cols-3",
+              )}
+            >
+              {shownTestimonials.map((testimonial, i) => (
                 <Reveal key={testimonial._id} delay={i * 75} className="h-full">
                   <TestimonialCard testimonial={testimonial} />
                 </Reveal>
