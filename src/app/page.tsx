@@ -72,7 +72,15 @@ export default async function HomePage() {
       {(siteSettings?.homeIntroHeading || siteSettings?.homeIntroBody || primaryInstructor) && (
         <section className="container mx-auto px-4 py-16 md:py-24">
           <Reveal>
-          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-12">
+          {/* Two-column only when there's a photo to fill the second column;
+              without one the text centers like every other homepage section. */}
+          <div
+            className={cn(
+              primaryInstructor?.photo
+                ? "grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-12"
+                : "mx-auto max-w-2xl text-center",
+            )}
+          >
             {primaryInstructor?.photo && (
               <div className="order-1 md:order-2">
                 <Image
