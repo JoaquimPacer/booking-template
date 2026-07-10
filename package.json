@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma migrate deploy && next build",
+    "postbuild": "node scripts/indexnow-submit.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -23,6 +24,7 @@
     "@sanity/image-url": "^2.1.1",
     "@sanity/orderable-document-list": "^1.5.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
