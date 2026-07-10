@@ -18,7 +18,14 @@
 
 const env = process.env.VERCEL_ENV;
 const key = process.env.INDEXNOW_KEY;
-const site = process.env.NEXT_PUBLIC_SITE_URL;
+// Same resolution chain as src/lib/seo.ts getSiteUrl(), so we always submit
+// exactly the host the sitemap and canonicals are built with. Per-deployment
+// URLs (VERCEL_URL) are deliberately excluded: never submit those to engines.
+const site =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : undefined);
 
 function log(msg) {
   console.log(`[indexnow] ${msg}`);
@@ -29,7 +36,9 @@ if (env !== "production") {
   process.exit(0);
 }
 if (!key || !site) {
-  log(`skip: ${!key ? "INDEXNOW_KEY" : "NEXT_PUBLIC_SITE_URL"} not set`);
+  log(
+    `skip: ${!key ? "INDEXNOW_KEY" : "no site URL (NEXT_PUBLIC_SITE_URL / VERCEL_PROJECT_PRODUCTION_URL)"} not set`,
+  );
   process.exit(0);
 }
 
