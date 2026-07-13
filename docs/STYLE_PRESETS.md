@@ -4,6 +4,13 @@ The single source of truth for the A / B / C design presets. If you are about
 to demo the switcher to a prospect or explain the options to a client, this is
 the file.
 
+> **Where the code lives (until the Theresa fork migration):** the amplified
+> Luxe CSS and the B-Editorial default described below are on the branch
+> `design/luxe-amplified`, not yet on `main`, because `main` still deploys
+> theresaattea.com and her live site stays as-is (ADR 0006). **New client
+> forks branch from `design/luxe-amplified`.** This doc lives on `main` so it
+> is always findable.
+
 ## The one-sentence version
 
 One dropdown in Sanity (Site Settings > Brand theme > Style preset) restyles
