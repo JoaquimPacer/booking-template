@@ -431,4 +431,87 @@ html[data-style="soft-luxe"] .about-portrait {
     opacity: 1;
     translate: 0 0;
   }
+}}
+
+/* ===========================================================================
+   SOFT LUXE AMPLIFIED (2026-07-11)
+   Clients flipping the demo switcher could not SEE Editorial vs Luxe: both
+   read as the same site with subtler shadows (Joaquim, two client demos).
+   Luxe now owns an unmistakable personality: warm saturated bands, rounder
+   corners, deeper brand-tinted depth, gradient CTAs, a floating frosted
+   header, and a darker footer band. Every selector below is scoped to
+   soft-luxe, so Editorial and Classic render byte-identical to before;
+   later source order lets these override the earlier soft-luxe values
+   without editing them.
+   =========================================================================== */
+html[data-style="soft-luxe"] {
+  /* Rounder everything: cards, buttons, inputs inherit via Tailwind's
+     radius scale (all rounded-* utilities are bound to --radius). */
+  --radius: 1.25rem;
+  /* Brand-washed tinted bands (services band, page headers, final CTA):
+     tint toward the PRIMARY so the band reads as the brand color, not as
+     the near-invisible gray the secondary mix produced. */
+  --muted: color-mix(in oklab, var(--primary) 16%, var(--background));
+  /* Deep, large, brand-tinted elevation: visibly floating cards. */
+  --elevation-1:
+    0 3px 6px color-mix(in oklab, var(--primary) 14%, transparent),
+    0 24px 56px -12px color-mix(in oklab, var(--foreground) 30%, transparent);
+  --elevation-2:
+    0 6px 14px color-mix(in oklab, var(--primary) 18%, transparent),
+    0 36px 80px -16px color-mix(in oklab, var(--foreground) 38%, transparent);
+}
+
+/* Solid CTAs read "polished button": a clear top-lit gradient over the
+   brand primary. Hero CTAs opt out (they can be outline on a photo, where
+   a gradient fill would look broken). */
+html[data-style="soft-luxe"] .cta-button {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--primary) 72%, white),
+    var(--primary) 80%
+  );
+}
+html[data-style="soft-luxe"] .hero-section .cta-button {
+  background-image: none;
+}
+
+/* The big tinted section bands (services, page headers, final CTA) use the
+   bg-muted/40 utility, whose 40% opacity dilutes any --muted change into
+   invisibility. Luxe re-colors the band surface directly: a full-strength
+   brand wash that reads as "the brand color", not gray. */
+html[data-style="soft-luxe"] .bg-muted\/40 {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--primary) 18%, var(--background)),
+    color-mix(in oklab, var(--primary) 7%, var(--background))
+  );
+}
+/* The tinted bands float as giant rounded panels instead of full-bleed flat
+   bands: a structural tell that reads instantly on ANY brand palette (color
+   washes alone converge with Editorial's gray on blue-ish brands). */
+html[data-style="soft-luxe"] section.bg-muted\/40 {
+  margin-inline: max(1rem, calc((100vw - 84rem) / 2));
+  margin-block: 1.5rem;
+  border-radius: calc(var(--radius) * 2);
+  border-bottom: none;
+  box-shadow: var(--elevation-1);
+  overflow: hidden;
+}
+
+/* Floating frosted header: soft shadow instead of the hairline border. */
+html[data-style="soft-luxe"] .site-header {
+  border-bottom-color: transparent;
+  box-shadow: var(--elevation-1);
+}
+
+/* Every card carries depth, not just service cards: testimonials too
+   (replaces their flat ring with the same soft elevation). */
+html[data-style="soft-luxe"] [data-slot="card"] {
+  box-shadow: var(--elevation-1);
+}
+
+/* Footer band deepens from a 10% to a 30% primary tint: clearly "dressed
+   in the brand color" next to Editorial's pale band. */
+html[data-style="soft-luxe"] .site-footer {
+  background-color: color-mix(in oklab, var(--background) 70%, var(--primary));
 }
