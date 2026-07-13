@@ -23,7 +23,9 @@ export const brand = defineType({
         ],
         layout: "radio",
       },
-      initialValue: "classic",
+      // B - Editorial is the house default for new clients (Joaquim,
+      // 2026-07-12). Existing datasets keep whatever they have set.
+      initialValue: "warm-editorial",
     }),
     defineField({
       name: "primaryColor",
