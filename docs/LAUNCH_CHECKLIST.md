@@ -59,6 +59,7 @@ Work top to bottom. Most steps are one-time per client.
 ## 5. Per-client env (when each client gets their own infra at scale)
 - Each client = own Sanity project + own Vercel project + (if using built-in booking) own Neon DB.
 - Set in that client's Vercel project env: `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `NEXT_PUBLIC_STUDIO_TITLE`, Sanity tokens, and (if built-in booking) `DATABASE_URL`/`DIRECT_URL`.
+- [ ] **Scope every env var to Production AND all Preview branches** (leave the branch box empty in the Vercel dashboard). Never pin a variable to a single branch: builds of any OTHER branch then silently run without it (the site queries Sanity project "placeholder" and the build fails). This broke every new-branch preview on Newberry, 2026-07-11. Same project ID for Preview and Production is the norm: branches change structure, content stays one Sanity project.
 
 ## Quick "what lives where" (for explaining to clients)
 - **Sanity** = everything you see + edit (words, photos, prices, the dashboard).
