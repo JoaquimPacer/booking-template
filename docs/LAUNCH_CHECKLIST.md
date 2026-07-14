@@ -61,6 +61,32 @@ Work top to bottom. Most steps are one-time per client.
 - Set in that client's Vercel project env: `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `NEXT_PUBLIC_STUDIO_TITLE`, Sanity tokens, and (if built-in booking) `DATABASE_URL`/`DIRECT_URL`.
 - [ ] **Scope every env var to Production AND all Preview branches** (leave the branch box empty in the Vercel dashboard). Never pin a variable to a single branch: builds of any OTHER branch then silently run without it (the site queries Sanity project "placeholder" and the build fails). This broke every new-branch preview on Newberry, 2026-07-11. Same project ID for Preview and Production is the norm: branches change structure, content stays one Sanity project.
 
+## 6. Search Console + monthly SEO report (recurring deliverable)
+The monthly SEO report is a standard deliverable for every client who has Search Console. The
+report tooling lives in the ops repo (`booking-flow-pitches/tools/seo/`), not here; this is the
+per-client setup so a new client starts getting the report.
+- [ ] **Verify the client's Google Search Console (GSC) property.** Use a **Domain** property
+  (covers www + non-www): GSC > Add property > Domain > enter the domain, add the TXT record it
+  gives you at the DNS host (Cloudflare), then submit `https://<domain>/sitemap.xml` under
+  Sitemaps. GSC is Google's report card for the site: which searches bring people in, which
+  pages are indexed.
+- [ ] **Grant the reporting service account access.** In GSC > Settings > Users and permissions,
+  add the reporting service account's email (the `client_email` inside the
+  `GSC_SERVICE_ACCOUNT_JSON` key) as a Full or Restricted user. One shared service account serves
+  every client; you just add it to each new property.
+- [ ] **Add the client to the monthly report workflow** matrix in
+  `booking-flow-pitches/.github/workflows/monthly-seo-report.yml`: a block with `client`,
+  `property` (`sc-domain:<domain>`), `brand`, `business_query` + `competitor_query` (how to find
+  them and their nearby competitors on Google), `relevance_terms` (keeps off-topic searches out
+  of the report), and `exclude_reviewers` (e.g. your own review).
+- [ ] **Repo secrets (one-time for the whole workflow, NOT per client):**
+  `GSC_SERVICE_ACCOUNT_JSON` (the service-account key) and the shared `GOOGLE_PLACES_API_KEY`
+  (one key for all clients; powers the reviews + competitor sections). Without the Places key the
+  report still runs on search data alone.
+- [ ] Runs monthly (end of month; a new client's FIRST report is run mid-month so they can give
+  feedback) and goes to the client by email with a Drive link plus a few highlights. Details in
+  the `project_seo_report_standard` memory.
+
 ## Quick "what lives where" (for explaining to clients)
 - **Sanity** = everything you see + edit (words, photos, prices, the dashboard).
 - **Neon** = the live records: bookings, customers, payments, availability. (Idle for clients on an external scheduler like Jane.)
