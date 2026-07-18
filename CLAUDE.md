@@ -40,3 +40,4 @@ Project notes for the booking-template repo. The global engineering and writing 
 - No em-dashes in any output.
 - New Sanity content types need a registry entry in `sanity/schemas/index.ts`.
 - Hardcoded CTAs (Book now etc.) belong in Sanity fields with a code fallback, not as bare strings in components.
+- Any content type with a display order (services, FAQs, nav items, gallery pieces) gets drag-to-reorder from day one: `@sanity/orderable-document-list` with `orderRankField` in the schema, `orderableDocumentListDeskItem` in `sanity/structure.ts`, frontend sort on `orderRank`, ranks seeded via `src/lib/order-rank.ts`. Never add a numeric position field (standing rule from Joaquim, 2026-07-18). Services already comply; `faq` and `navItem` still use numeric `order` and owe a retrofit (carded on JQ Innovation HQ; needs a per-client live-data migration, see marley-art `scripts/migrate-drag-order.ts` for the proven shape).
