@@ -10,4 +10,8 @@ export const sanity = createClient({
   apiVersion: sanityApiVersion,
   useCdn: process.env.NODE_ENV === "production",
   token: process.env.SANITY_API_READ_TOKEN,
+  // With a token, the default ("raw") perspective returns DRAFTS alongside
+  // published docs, so unpublished Studio edits would render on the live site
+  // (bit marley-art 2026-07-20). Published-only keeps drafts private.
+  perspective: "published",
 });
