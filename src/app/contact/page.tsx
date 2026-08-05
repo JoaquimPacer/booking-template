@@ -19,7 +19,7 @@ export async function generateMetadata() {
     fallback: {
       title: "Contact and Booking",
       description:
-        "Reach Theresa Attea, LMT in South Austin. Find hours, location, and the link to book oncology, lymphatic, pregnancy, and therapeutic massage online.",
+        "Get in touch. Find our hours, location, and the link to book online. Set this in Sanity under Pages, Contact.",
     },
     path: "/contact",
     siteSettings,

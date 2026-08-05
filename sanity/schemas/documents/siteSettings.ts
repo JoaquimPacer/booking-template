@@ -155,7 +155,7 @@ export const siteSettings = defineType({
               type: "string",
               title: "Describe this photo (alt text)",
               description:
-                "One short sentence, e.g. 'Massage table by the window with soft lighting'. Helps Google understand the photo and screen readers describe it.",
+                "One short sentence describing what is in the photo, e.g. 'Front room with soft lighting'. Helps Google understand the photo and screen readers describe it.",
             },
           ],
         },

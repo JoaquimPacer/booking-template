@@ -7,11 +7,12 @@
     "build": "prisma migrate deploy && next build",
     "postbuild": "node scripts/indexnow-submit.mjs",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint && node scripts/check-no-client-content.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "check:no-client-content": "node scripts/check-no-client-content.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

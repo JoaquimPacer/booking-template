@@ -25,9 +25,9 @@ export async function generateMetadata() {
   return buildPageMetadata({
     seo: aboutPage?.seo,
     fallback: {
-      title: "Meet Theresa, Your Massage Therapist",
+      title: "About Us",
       description:
-        "Meet Theresa Attea, LMT: a registered nurse, oncology massage specialist, and two-time cancer survivor offering gentle, skilled bodywork in South Austin.",
+        "Meet the team behind the business, what we do, and why clients keep coming back. Set this in Sanity under Pages, About.",
     },
     path: "/about",
     siteSettings,

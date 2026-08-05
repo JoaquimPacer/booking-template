@@ -1,6 +1,6 @@
 // Server-only data layer for the booking flow. Loads the studio's hours and
 // existing bookings from Postgres, pulls the service's duration/buffer from
-// Sanity (the source of truth Theresa edits), and runs the pure availability
+// Sanity (the source of truth the client edits), and runs the pure availability
 // engine. Imported by the /book page and the createPendingBooking action ONLY.
 // Never import this from a client component (it pulls in Prisma).
 

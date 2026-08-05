@@ -128,13 +128,13 @@ export const service = defineType({
     // Optional cancellation policy. When both are left blank the service page
     // shows nothing; fill them to add a collapsible policy section (same
     // accordion the FAQ page uses). Per-service so each treatment can have its
-    // own wording (e.g. oncology gets a gentler illness clause).
+    // own wording (e.g. a sensitive service may want a gentler clause).
     defineField({
       name: "cancellationHeading",
       title: "Cancellation policy heading (optional)",
       type: "string",
       description:
-        'Optional. Title shown on the collapsible policy on this service page, e.g. "Cancellation Policy for Oncology Massage". Leave blank to hide the policy entirely.',
+        'Optional. Title shown on the collapsible policy on this service page, e.g. "Cancellation Policy". Leave blank to hide the policy entirely.',
       group: "content",
     }),
     defineField({

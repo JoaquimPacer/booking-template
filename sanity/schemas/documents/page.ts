@@ -45,8 +45,8 @@ export const page = defineType({
       title: "Team heading (About page)",
       type: "string",
       description:
-        'Heading above the team / bio section on the About page. Defaults to "Meet Theresa" if left blank.',
-      initialValue: "Meet Theresa",
+        'Heading above the team / bio section on the About page, e.g. "Meet the team".',
+      initialValue: "Meet the team",
     }),
     // Contact-page header copy. Only used by the /contact route; other pages can
     // leave these blank. The component falls back to a default when unset.
