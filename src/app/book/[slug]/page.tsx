@@ -41,7 +41,7 @@ export default async function BookPage({ params }: BookPageProps) {
   ]);
   if (!service || service.isActive === false) notFound();
 
-  // If this client uses an external scheduler (e.g. JaneApp), bypass the
+  // If this client uses an external scheduler, bypass the
   // built-in booking flow entirely and send them there.
   if (settingsForBooking?.externalBookingUrl) {
     redirect(settingsForBooking.externalBookingUrl);

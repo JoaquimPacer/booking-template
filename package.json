@@ -7,7 +7,7 @@
     "build": "prisma migrate deploy && next build",
     "postbuild": "node scripts/indexnow-submit.mjs",
     "start": "next start",
-    "lint": "eslint && node scripts/check-no-client-content.mjs",
+    "lint": "node scripts/check-no-client-content.mjs && eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",

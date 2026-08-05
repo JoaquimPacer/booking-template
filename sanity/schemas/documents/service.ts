@@ -164,7 +164,7 @@ export const service = defineType({
       title: "Booking link for this service (optional)",
       type: "url",
       description:
-        "Optional. Paste this service's exact JaneApp (or other scheduler) link so the Book button lands right on this treatment. Leave blank to use the site-wide booking link from Site Settings.",
+        "Optional. Paste this item's exact link in your scheduler so the Book button lands right on it. Leave blank to use the site-wide booking link from Site Settings.",
       group: "booking",
     }),
     defineField({
@@ -204,7 +204,7 @@ export const service = defineType({
               title: "Booking link for this option",
               type: "url",
               description:
-                "The JaneApp (or other scheduler) deep link for this specific length.",
+                "The deep link in your scheduler for this specific length.",
             }),
           ],
           preview: {

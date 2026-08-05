@@ -22,13 +22,18 @@
  *     name the clients involved in a decision) and scripts/ (one-off seed and
  *     migration scripts; tracked separately, see the note at the bottom).
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = process.cwd();
 
-/** Directories whose contents ship to a visitor or appear in Studio. */
-const SCANNED = ["src/app", "src/components", "src/content", "src/lib", "sanity"];
+/**
+ * Whole trees whose contents ship to a visitor or appear in Studio. Deliberately
+ * coarse: an earlier hand-listed set of subdirectories named `src/content`, which
+ * does not exist in this repo but does in forks, and the missing root was silently
+ * skipped. Scanning `src` entirely is robust to layout changes and catches more.
+ */
+const SCANNED = ["src", "sanity"];
 
 /** Files and directories skipped anywhere under a scanned root. */
 const SKIP = new Set(["node_modules", ".next", "dist", "build", "__snapshots__"]);
@@ -47,29 +52,38 @@ const DENYLIST = [
   "south austin",
   "massage",
   "\\bLMT\\b",
+  // Industry-specific leftovers an independent review found after the first pass:
+  // a named third-party scheduler, a modality, and clinical vocabulary.
+  // NOTE: "treatment" was tried and removed; it false-positives on design
+  // vocabulary like "section treatment". Keep terms narrow enough to stay useful.
+  "janeapp",
+  "deep tissue",
+  "\\bpatients?\\b",
 ];
 
 const PATTERN = new RegExp(`(${DENYLIST.join("|")})`, "i");
 
 function walk(dir, out = []) {
-  let entries;
-  try {
-    entries = readdirSync(dir);
-  } catch {
-    return out;
-  }
+  // Fail loudly. Swallowing a missing directory made the whole check silently
+  // pass when run from the wrong place, which is worse than no check at all.
+  const entries = readdirSync(dir);
   for (const name of entries) {
     if (SKIP.has(name)) continue;
     const full = join(dir, name);
     if (statSync(full).isDirectory()) walk(full, out);
-    else if (/\.(ts|tsx|js|jsx|mjs|json|md)$/.test(name)) out.push(full);
+    else if (/\.(ts|tsx|js|jsx|mjs|json|md|css)$/.test(name)) out.push(full);
   }
   return out;
 }
 
 const hits = [];
 for (const root of SCANNED) {
-  for (const file of walk(join(ROOT, root))) {
+  const abs = join(ROOT, root);
+  if (!existsSync(abs)) {
+    console.error(`check-no-client-content: scanned root missing: ${root}. Run from the repo root.`);
+    process.exit(2);
+  }
+  for (const file of walk(abs)) {
     const lines = readFileSync(file, "utf8").split("\n");
     lines.forEach((line, i) => {
       const m = line.match(PATTERN);
