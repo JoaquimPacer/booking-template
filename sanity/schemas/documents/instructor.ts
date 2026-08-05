@@ -1,7 +1,7 @@
 import { defineField, defineType } from "sanity";
 
 // Practitioner / instructor / staff bio. Surfaced on the About page and
-// optionally on service pages (e.g. "Provided by Theresa").
+// optionally on service pages (e.g. "Provided by <name>").
 export const instructor = defineType({
   name: "instructor",
   title: "Instructor",
@@ -17,7 +17,7 @@ export const instructor = defineType({
       name: "title",
       title: "Title / credentials",
       type: "string",
-      description: "e.g. 'Licensed Massage Therapist', 'LMT, 8 years experience'.",
+      description: "The line under their name, e.g. 'Lead practitioner' or '8 years experience'.",
     }),
     defineField({
       name: "slug",
@@ -41,7 +41,7 @@ export const instructor = defineType({
       name: "specialties",
       title: "Specialties",
       type: "string",
-      description: "Comma-separated list shown as pills. e.g. 'Deep tissue, Sports recovery, Chronic tension'",
+      description: "Comma-separated list shown as pills, e.g. 'Beginners, Small groups, Private sessions'",
     }),
     defineField({
       name: "yearsExperience",

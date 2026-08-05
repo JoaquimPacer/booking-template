@@ -64,10 +64,10 @@ export const siteSettings = defineType({
     // ---- Booking ----
     defineField({
       name: "externalBookingUrl",
-      title: "External booking link (e.g. JaneApp)",
+      title: "External booking link (your scheduler)",
       type: "url",
       description:
-        "Optional. If you take bookings through an outside scheduler like JaneApp (which also handles payments and patient privacy), paste your booking page link here. When set, every 'Book' button on the site sends clients there in a new tab, and the built-in scheduler is skipped. Leave blank to use the built-in scheduler.",
+        "Optional. If you take bookings through an outside scheduler (one that also handles payments and privacy for you), paste your booking page link here. When set, every 'Book' button on the site sends clients there in a new tab, and the built-in scheduler is skipped. Leave blank to use the built-in scheduler.",
       group: "booking",
     }),
 
@@ -155,7 +155,7 @@ export const siteSettings = defineType({
               type: "string",
               title: "Describe this photo (alt text)",
               description:
-                "One short sentence, e.g. 'Massage table by the window with soft lighting'. Helps Google understand the photo and screen readers describe it.",
+                "One short sentence describing what is in the photo, e.g. 'Front room with soft lighting'. Helps Google understand the photo and screen readers describe it.",
             },
           ],
         },
@@ -322,7 +322,7 @@ export const siteSettings = defineType({
           name: "addressLocality",
           title: "City",
           type: "string",
-          description: "City, for your Google business listing (e.g. Austin).",
+          description: "City, for your Google business listing (e.g. your home city).",
         }),
         defineField({
           name: "addressRegion",

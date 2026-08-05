@@ -163,11 +163,11 @@ export function BookingFlow({ service, data }: Props) {
           <Textarea
             id="notes"
             rows={3}
-            placeholder="Parking, accessibility, how you heard about us, etc. Please don't include any health or medical details here."
+            placeholder="Parking, accessibility, how you heard about us, or anything else we should know."
             {...register("notes")}
           />
           <p className="text-xs text-foreground/50">
-            Please keep health details for your in-person intake, not this form.
+            Please leave out anything sensitive or confidential; bring that in person instead.
           </p>
         </div>
 

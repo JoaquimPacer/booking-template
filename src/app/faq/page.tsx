@@ -20,9 +20,9 @@ export async function generateMetadata() {
   const siteSettings = await getSiteSettings();
   return buildPageMetadata({
     fallback: {
-      title: "Questions About Your Massage Visit",
+      title: "Frequently Asked Questions",
       description:
-        "Answers to common questions about booking, what to expect, pricing, and oncology and lymphatic massage with Theresa Attea, LMT in South Austin.",
+        "Answers to common questions about booking, what to expect, and pricing. Set this in Sanity under Pages, FAQ.",
     },
     path: "/faq",
     siteSettings,

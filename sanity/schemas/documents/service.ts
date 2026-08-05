@@ -128,13 +128,13 @@ export const service = defineType({
     // Optional cancellation policy. When both are left blank the service page
     // shows nothing; fill them to add a collapsible policy section (same
     // accordion the FAQ page uses). Per-service so each treatment can have its
-    // own wording (e.g. oncology gets a gentler illness clause).
+    // own wording (e.g. a sensitive service may want a gentler clause).
     defineField({
       name: "cancellationHeading",
       title: "Cancellation policy heading (optional)",
       type: "string",
       description:
-        'Optional. Title shown on the collapsible policy on this service page, e.g. "Cancellation Policy for Oncology Massage". Leave blank to hide the policy entirely.',
+        'Optional. Title shown on the collapsible policy on this service page, e.g. "Cancellation Policy". Leave blank to hide the policy entirely.',
       group: "content",
     }),
     defineField({
@@ -164,7 +164,7 @@ export const service = defineType({
       title: "Booking link for this service (optional)",
       type: "url",
       description:
-        "Optional. Paste this service's exact JaneApp (or other scheduler) link so the Book button lands right on this treatment. Leave blank to use the site-wide booking link from Site Settings.",
+        "Optional. Paste this item's exact link in your scheduler so the Book button lands right on it. Leave blank to use the site-wide booking link from Site Settings.",
       group: "booking",
     }),
     defineField({
@@ -204,7 +204,7 @@ export const service = defineType({
               title: "Booking link for this option",
               type: "url",
               description:
-                "The JaneApp (or other scheduler) deep link for this specific length.",
+                "The deep link in your scheduler for this specific length.",
             }),
           ],
           preview: {

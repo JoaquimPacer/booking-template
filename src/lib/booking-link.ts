@@ -1,7 +1,7 @@
 // Resolves where a "Book" button should go.
 //
 // Two booking modes per client deploy:
-//  - External scheduler (e.g. JaneApp): siteSettings.externalBookingUrl is set.
+//  - External scheduler: siteSettings.externalBookingUrl is set.
 //    Every Book button links out to it (handles payments + privacy on their side).
 //  - Built-in scheduler: no external URL -> our own /book/[slug] flow.
 //
