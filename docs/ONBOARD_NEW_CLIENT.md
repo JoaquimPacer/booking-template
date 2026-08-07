@@ -1,5 +1,7 @@
 # Onboard a new client
 
+> **Superseded for provisioning (2026-08-07):** the `site-build-loop` skill (claude-config) now holds the current, fully API-driven flow: scripted Sanity org/project/token/CORS setup and dashboard-free Vercel provisioning (`vercel link --yes` + REST PATCHes). Steps below that click through dashboards are the old way; keep this doc for the template-fork specifics (Neon, Prisma, Stripe) until those migrate into the skill.
+
 Process for spinning up a per-client deploy from this template. Target time: under one full day of dev work.
 
 ## 1. Create the client repo
