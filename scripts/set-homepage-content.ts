@@ -21,6 +21,7 @@ import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
 import { colorFromHex } from "./lib/sanity-color";
+import { safeError } from "../src/lib/redact";
 
 // Warm, specific, human intro copy. Pulled from Theresa's real background
 // (28 yrs experience, RN/BSN, two-time cancer survivor, oncology focus).
@@ -108,6 +109,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Set homepage content failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

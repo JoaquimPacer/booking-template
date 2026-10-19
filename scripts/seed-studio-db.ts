@@ -20,6 +20,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const STUDIO_SLUG = "theresa-attea";
 const STUDIO_TIMEZONE = "America/Chicago"; // Austin, TX
@@ -118,6 +119,6 @@ async function main() {
 
 main().catch(async (err) => {
   console.error("DB seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

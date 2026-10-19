@@ -20,6 +20,7 @@ import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { groq } from "next-sanity";
 import type { SanityClient } from "@sanity/client";
+import { safeError } from "../src/lib/redact";
 
 type Target =
   | { kind: "instructorPhoto" } // -> instructor.photo
@@ -124,6 +125,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Image upload failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

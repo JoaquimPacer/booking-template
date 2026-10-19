@@ -42,6 +42,7 @@
 //     than overwriting the demo. See README for the per-prospect-project workflow.
 
 import "dotenv/config";
+import { safeError } from "../src/lib/redact";
 
 interface CliArgs {
   placeId?: string;
@@ -339,6 +340,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("\nReplicate failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

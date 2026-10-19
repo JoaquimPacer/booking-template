@@ -15,6 +15,7 @@
 
 import "dotenv/config";
 import { readFileSync } from "node:fs";
+import { safeError } from "../src/lib/redact";
 
 interface Backup {
   projectId?: string;
@@ -65,6 +66,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Restore failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

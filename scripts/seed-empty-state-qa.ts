@@ -22,6 +22,7 @@
 // deletes the qa docs above the requested counts.
 
 import "dotenv/config";
+import { safeError } from "../src/lib/redact";
 
 // HARD SAFETY GUARD. The repo .env points at a LIVE CLIENT project with an
 // active write token; this fixture must never be able to touch a client
@@ -128,6 +129,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Empty-state QA seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

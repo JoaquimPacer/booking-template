@@ -5,6 +5,7 @@ import { BookingStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getServiceBySlug } from "@/lib/sanity-queries";
 import { computeServiceSlots, getStudio } from "@/lib/booking-data";
+import { safeError } from "@/lib/redact";
 
 const bookingSchema = z.object({
   slug: z.string().min(1),
@@ -95,7 +96,7 @@ export async function createPendingBooking(input: BookingInput): Promise<Booking
     if (err instanceof Error && err.message === "SLOT_TAKEN") {
       return { ok: false, error: "Sorry, that time was just taken. Please pick another." };
     }
-    console.error("createPendingBooking failed:", err);
+    console.error("createPendingBooking failed:", safeError(err));
     return { ok: false, error: "Something went wrong creating your booking. Please try again." };
   }
 }

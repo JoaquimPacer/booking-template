@@ -32,6 +32,7 @@ import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
 import { generateOrderRanks } from "../src/lib/order-rank";
+import { safeError } from "../src/lib/redact";
 
 // Fields this script owns. Anything NOT in this list (heroImage, gallery, body,
 // whatToExpect, seo) is preserved on existing docs.
@@ -443,6 +444,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

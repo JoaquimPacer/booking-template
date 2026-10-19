@@ -12,6 +12,7 @@
 // Idempotent: deterministic ids ("faq-<key>"), so re-running updates in place.
 
 import "dotenv/config";
+import { safeError } from "../src/lib/redact";
 
 interface FaqSeed {
   key: string;
@@ -123,6 +124,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("FAQ seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

@@ -13,6 +13,7 @@
 // "Navigation", or change this list and re-run.
 
 import "dotenv/config";
+import { safeError } from "../src/lib/redact";
 
 // location: "header" (top bar + hamburger), "footer", or "both".
 const NAV = [
@@ -54,6 +55,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Nav seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

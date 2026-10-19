@@ -13,6 +13,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 interface ServiceDoc {
   _id: string;
@@ -122,7 +123,7 @@ async function main() {
       await sanityWrite.delete(doc._id);
       console.log(`  Deleted ${doc._id}`);
     } catch (e) {
-      console.error(`  Failed to delete ${doc._id}:`, e);
+      console.error(`  Failed to delete ${doc._id}:`, safeError(e));
     }
   }
 
@@ -132,6 +133,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Dedup failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

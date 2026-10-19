@@ -21,6 +21,7 @@
 import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const JANE_BASE =
   "https://cancerrehab.janeapp.com/locations/theresa-s-home-office/book#/staff_member/5/treatment/";
@@ -116,6 +117,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error(safeError(e));
   process.exit(1);
 });

@@ -20,6 +20,7 @@
 // PUBLISHED document directly (same approach as scripts/seed-nav.ts).
 
 import "dotenv/config";
+import { safeError } from "../src/lib/redact";
 
 // One object per route. Keys map 1:1 to the fields the matching page component
 // reads from its page document, set to that component's exact fallback string.
@@ -95,6 +96,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Page seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

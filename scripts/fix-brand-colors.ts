@@ -19,6 +19,7 @@ import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
 import { colorFromHex } from "./lib/sanity-color";
+import { safeError } from "../src/lib/redact";
 
 // The professional default palette (same hexes as the code defaults).
 const PALETTE: Record<string, string> = {
@@ -74,6 +75,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Fix brand colors failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

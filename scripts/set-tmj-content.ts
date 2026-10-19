@@ -18,6 +18,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const DRAFT_ID = "drafts.96125818-8ff7-4642-a745-9f18661c5cdb";
 const EXPECT_TITLE = "TMJ & Jaw Tension Relief Massage";
@@ -127,6 +128,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error(safeError(e));
   process.exit(1);
 });

@@ -16,6 +16,7 @@
 import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const COMBINES = [
   { keep: "service-oncology-massage-60", drop: "service-oncology-massage-90", title: "Oncology Massage" },
@@ -121,6 +122,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error(safeError(e));
   process.exit(1);
 });

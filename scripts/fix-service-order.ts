@@ -24,6 +24,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
 import { LexoRank } from "lexorank";
 import { generateOrderRanks } from "../src/lib/order-rank";
+import { safeError } from "../src/lib/redact";
 
 // A stored rank is only usable if the plugin can LexoRank.parse() it. Earlier
 // versions of this script wrote base-36 strings that are NOT valid LexoRank, so
@@ -102,6 +103,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Fix order failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });
