@@ -13,12 +13,19 @@ interface BrandThemeProps {
   siteSettings: SiteSettings | null;
 }
 
+// The colors land inside a raw <style> body, where a value containing
+// "</style>" would close the tag and let markup after it run. So only real CSS
+// color syntax gets through: hex (3, 4, 6 or 8 digits), rgb()/rgba()/hsl()/hsla()
+// with numeric arguments, or a bare named color. Anything else uses the default.
+const SAFE_CSS_COLOR =
+  /^(?:#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgba?|hsla?)\([0-9.,%/\s+-]+\)|[a-zA-Z]+)$/;
+
 // @sanity/color-input stores values as { hex: "#...", ... } objects.
 // Accept that shape (and string for backward compat) and return a plain hex.
 function colorHex(color: SanityColor | string | undefined, fallback: string): string {
   if (!color) return fallback;
-  if (typeof color === "string") return color;
-  return color.hex ?? fallback;
+  const value = typeof color === "string" ? color : color.hex;
+  return typeof value === "string" && SAFE_CSS_COLOR.test(value) ? value : fallback;
 }
 
 export function BrandTheme({ siteSettings }: BrandThemeProps) {
