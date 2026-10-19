@@ -5,8 +5,8 @@
 // points at: the Studio row, weekly availability hours, and a Service row per
 // Sanity service (linked by sanityId, the FK target for bookings).
 //
-// RUN ORDER: run AFTER scripts/seed-theresa-services.ts --apply, so Sanity holds
-// the real services this script mirrors into Postgres.
+// RUN ORDER: run AFTER the client's services are published in Sanity, so Sanity
+// holds the real services this script mirrors into Postgres.
 //
 // USAGE:
 //   npx tsx scripts/seed-studio-db.ts            # dry-run; prints the plan
