@@ -16,6 +16,8 @@
 // The key must also be served at <site>/indexnow.txt (see src/app/indexnow.txt/
 // route.ts); engines fetch it once to verify we own the host.
 
+import { safeError } from "../src/lib/redact.ts";
+
 const env = process.env.VERCEL_ENV;
 const key = process.env.INDEXNOW_KEY;
 // Same resolution chain as src/lib/seo.ts getSiteUrl(), so we always submit
@@ -46,7 +48,7 @@ try {
   const sitemapUrl = new URL("/sitemap.xml", site).href;
   const res = await fetch(sitemapUrl, { signal: AbortSignal.timeout(20000) });
   if (!res.ok) {
-    log(`skip: live sitemap not reachable yet (${res.status} from ${sitemapUrl})`);
+    log(`skip: live sitemap not reachable yet (${res.status})`);
     process.exit(0);
   }
   const xml = await res.text();
@@ -72,6 +74,6 @@ try {
   log(`submitted ${urls.length} URLs for ${host}: HTTP ${submit.status}`);
 } catch (err) {
   // Never fail a deploy over a ping.
-  log(`skip: ${err?.message ?? err}`);
+  console.warn("[indexnow] skip:", safeError(err));
 }
 process.exit(0);

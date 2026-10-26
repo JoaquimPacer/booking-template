@@ -1,7 +1,7 @@
 // Generic component to embed a JSON-LD object inside a page.
 // Renders a <script type="application/ld+json"> tag. Server-only.
 
-import { serializeJsonLd } from "@/lib/json-ld";
+import { serializeJsonLd } from "../lib/json-ld";
 
 interface JsonLdProps {
   data: object | null;

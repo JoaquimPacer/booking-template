@@ -16,6 +16,7 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "fs";
 import { join } from "path";
+import { safeError } from "../src/lib/redact";
 
 const BASE =
   "https://cancerrehab.janeapp.com/locations/theresa-s-home-office/book#/staff_member/5/treatment/";
@@ -65,7 +66,7 @@ mkdirSync(outDir, { recursive: true });
         .screenshot({ path: join(outDir, `sel-${id}.png`), fullPage: true })
         .catch(() => {});
     } catch (e) {
-      out.error = (e as Error).message;
+      out.error = safeError(e);
     }
     await ctx.close();
     console.log(JSON.stringify(out));
@@ -73,4 +74,7 @@ mkdirSync(outDir, { recursive: true });
 
   await browser.close();
   console.log("DONE");
-})();
+})().catch((err) => {
+  console.error("Booking-link verification failed:", safeError(err));
+  process.exitCode = 1;
+});

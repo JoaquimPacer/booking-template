@@ -3,9 +3,8 @@
 //
 // We override the shadcn CSS variables (--primary, --background, etc.) so the
 // entire site retheme happens whenever a client changes their colors in
-// Sanity Studio. Tailwind v4 expects valid color values (hex, oklch, rgb,
-// or hsl-with-parens) in CSS variables; bare HSL components like
-// "199 89% 48%" don't work, which is why we emit hex directly.
+// Sanity Studio. Studio stores hex; legacy strings can also use the supported
+// CSS color grammar below. Bare HSL components are not complete colors.
 
 import type { SanityColor, SiteSettings } from "@/lib/sanity-queries";
 
@@ -15,17 +14,77 @@ interface BrandThemeProps {
 
 // The colors land inside a raw <style> body, where a value containing
 // "</style>" would close the tag and let markup after it run. So only real CSS
-// color syntax gets through: hex (3, 4, 6 or 8 digits), rgb()/rgba()/hsl()/hsla()
-// with numeric arguments, or a bare named color. Anything else uses the default.
-const SAFE_CSS_COLOR =
-  /^(?:#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgba?|hsla?)\([0-9.,%/\s+-]+\)|[a-zA-Z]+)$/;
+// color syntax gets through. var() is deliberately rejected: brand inputs use
+// hex, and an unresolved custom property is not a validated color.
+const NAMED_COLORS = new Set(`
+aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue
+blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk
+crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki
+darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue
+dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite
+gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki
+lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen
+lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen
+magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen
+mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream
+mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid
+palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown
+seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen
+steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen
+transparent currentcolor
+`.trim().split(/\s+/));
+
+const NUMBER = /^[+-]?(?:\d*\.\d+|\d+)(?:e[+-]?\d+)?$/i;
+
+function numeric(value: string, suffix: RegExp = /%$/): boolean {
+  const number = value.replace(suffix, "");
+  return NUMBER.test(number) && Number.isFinite(Number(number));
+}
+
+function isColor(value: string): boolean {
+  if (value.length > 64 || /[<>"';{}\\]|(?:url|expression|var)\(/i.test(value)) return false;
+  // CSS permits only space, tab, line feed, form feed and carriage return.
+  if (/[^\S\t\n\f\r ]/.test(value)) return false;
+  // CSS names ignore ASCII casing, not Unicode lookalikes such as Kelvin K.
+  const color = value.trim().replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+  if (NAMED_COLORS.has(color) || /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/.test(color)) return true;
+  const match = /^(rgba?|hsla?)\(([\s\S]*)\)$/.exec(color);
+  if (!match) return false;
+
+  const args = match[2];
+  const legacy = args.includes(",");
+  let channels: string[];
+  let alpha: string | undefined;
+  if (legacy) {
+    const parts = args.split(",").map((part) => part.trim());
+    if (parts.length !== 3 && parts.length !== 4) return false;
+    channels = parts.slice(0, 3);
+    alpha = parts[3];
+    // Legacy comma RGB requires matching channel units; alpha is independent.
+    if (match[1].startsWith("rgb") && !channels.every((channel) => channel.endsWith("%") === channels[0].endsWith("%"))) return false;
+  } else {
+    const parts = args.split("/");
+    if (parts.length > 2) return false;
+    channels = parts[0].trim().split(/\s+/);
+    if (channels.length !== 3) return false;
+    alpha = parts[1]?.trim();
+  }
+  if (alpha !== undefined && !numeric(alpha)) return false;
+  if (match[1].startsWith("rgb")) return channels.every((channel) => numeric(channel));
+  // Only legacy comma HSL requires percentage saturation and lightness.
+  return numeric(channels[0], /(?:deg|grad|rad|turn)$/) &&
+    channels.slice(1).every((channel) => (!legacy || channel.endsWith("%")) && numeric(channel));
+}
 
 // @sanity/color-input stores values as { hex: "#...", ... } objects.
-// Accept that shape (and string for backward compat) and return a plain hex.
+// Accept that shape (and string for backward compat) and return a valid color.
 function colorHex(color: SanityColor | string | undefined, fallback: string): string {
   if (!color) return fallback;
   const value = typeof color === "string" ? color : color.hex;
-  return typeof value === "string" && SAFE_CSS_COLOR.test(value) ? value : fallback;
+  return typeof value === "string" && isColor(value) ? value : fallback;
 }
 
 export function BrandTheme({ siteSettings }: BrandThemeProps) {

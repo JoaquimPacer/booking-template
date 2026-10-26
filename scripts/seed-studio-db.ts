@@ -60,7 +60,7 @@ async function main() {
   );
   const syncable = services.filter((s) => typeof s.durationMinutes === "number");
 
-  console.log(`Database target: ${process.env.DATABASE_URL?.replace(/:[^:@/]+@/, ":***@") ?? "(unset)"}`);
+  console.log(`Database target: ${process.env.DATABASE_URL ? "configured" : "unset"}`);
   console.log(`Studio: ${siteName ?? "Theresa Attea, LMT"} (${STUDIO_SLUG}, ${STUDIO_TIMEZONE})`);
   console.log(`Weekly hour rules: ${WEEKLY_HOURS.length}`);
   console.log(`Services to sync (have a duration): ${syncable.length} of ${services.length}`);

@@ -1,10 +1,10 @@
 /**
- * Takes secrets out of anything on its way to a log.
+ * Classifies failures for logging without forwarding provider text.
  *
  * `err.message` is not safe on its own. A provider client puts the request URL
  * in the message, and the request URL carries the token; an auth failure
- * quotes the credential it rejected. Logging the message alone is the rule,
- * and this is what makes the rule true rather than aspirational.
+ * quotes the credential it rejected. Only safeError's fixed messages are
+ * approved for error logs; pattern redaction alone cannot guarantee safety.
  *
  * The shapes mirror the ones the operator's own scanner uses
  * (C:/Users/f927g/Repos/claude-config/tools/guards/credential-patterns.mjs),
@@ -55,7 +55,7 @@ const SECRET_SHAPES: readonly RegExp[] = [
 
 export const REDACTED = "[redacted]";
 
-/** Every secret shape replaced whole. Safe to hand to a logger. */
+/** Best-effort text redaction; use safeError for untrusted error messages. */
 export function redactSecrets(text: string): string {
   let safe = text;
   for (const shape of SECRET_SHAPES) {
@@ -65,27 +65,42 @@ export function redactSecrets(text: string): string {
 }
 
 export interface SafeErrorLog {
-  message: string;
-  status: number | "unknown";
+  message:
+    | "Network request failed"
+    | "Request timed out"
+    | "Upstream request failed"
+    | "Validation failed"
+    | "Unknown error";
+  /** HTTP status (100-599), or numeric sentinel 0 when unavailable or invalid. */
+  status: number;
 }
 
 /**
- * The two things a log is allowed to carry about a failure: a redacted
+ * The two things a log is allowed to carry about a failure: a fixed
  * message and a status code. Never the error object, which drags along the
  * request, its headers and whatever the client attached to it.
  */
 export function safeError(error: unknown): SafeErrorLog {
-  const message =
-    error instanceof Error && typeof error.message === "string"
-      ? redactSecrets(error.message)
-      : "unknown";
+  const details = error && typeof error === "object"
+    ? error as { code?: unknown; name?: unknown; statusCode?: unknown; status?: unknown }
+    : undefined;
   const candidate =
-    error && typeof error === "object"
-      ? ((error as { statusCode?: unknown; status?: unknown }).statusCode ??
-        (error as { status?: unknown }).status)
-      : undefined;
+    details?.statusCode ?? details?.status;
+  const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599
+    ? candidate : 0;
+  // Never forward provider messages: URLs, authorization and bodies can contain secrets.
+  let message: SafeErrorLog["message"] = "Unknown error";
+  if (details?.code === "ETIMEDOUT" || details?.name === "TimeoutError") {
+    message = "Request timed out";
+  } else if (typeof details?.code === "string" && ["ECONNREFUSED", "ECONNRESET", "ENOTFOUND", "EAI_AGAIN", "ENETUNREACH"].includes(details.code)) {
+    message = "Network request failed";
+  } else if (details?.name === "ZodError" || details?.name === "ValidationError") {
+    message = "Validation failed";
+  } else if (status !== 0) {
+    message = "Upstream request failed";
+  }
   return {
     message,
-    status: typeof candidate === "number" ? candidate : "unknown",
+    status,
   };
 }

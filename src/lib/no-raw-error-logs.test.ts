@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 
 const ROOT = process.cwd();
 const ROOTS = ["scripts", "src"];
@@ -85,8 +86,74 @@ function rawErrorLogs(): string[] {
   return hits;
 }
 
+// Check the caught value before it can be interpolated or assigned into a
+// later log payload. Looking only for console.error(err) misses both paths.
+function unsafeCaughtReferences(text: string): number[] {
+  const source = ts.createSourceFile("audit.tsx", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const hits: number[] = [];
+  function inspect(body: ts.Node, name: string) {
+    function visit(node: ts.Node) {
+      if (ts.isIdentifier(node) && node.text === name) {
+        const parent = node.parent;
+        const safe = ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) &&
+          parent.expression.text === "safeError" && parent.arguments.length === 1 && parent.arguments[0] === node;
+        // Local classification does not forward the value. Booking recovery
+        // compares a known message before returning its own fixed wording.
+        const typeCheck = ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword &&
+          ts.isIdentifier(parent.right) && parent.right.text === "Error";
+        const comparison = ts.isPropertyAccessExpression(parent) && parent.name.text === "message" ? parent.parent : undefined;
+        const messageCheck = comparison && ts.isBinaryExpression(comparison) &&
+          comparison.left === parent && ts.isStringLiteral(comparison.right) &&
+          [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(comparison.operatorToken.kind);
+        if (!safe && !typeCheck && !messageCheck) hits.push(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(body);
+  }
+  function find(node: ts.Node) {
+    if (ts.isCatchClause(node) && node.variableDeclaration && ts.isIdentifier(node.variableDeclaration.name)) {
+      inspect(node.block, node.variableDeclaration.name.text);
+    }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "catch") {
+      const handler = node.arguments[0];
+      if (handler && (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler))) {
+        const binding = handler.parameters[0]?.name;
+        if (binding && ts.isIdentifier(binding)) inspect(handler.body, binding.text);
+      }
+    }
+    ts.forEachChild(node, find);
+  }
+  find(source);
+  return hits;
+}
+
 describe("error logging", () => {
   it("never hands a raw caught error to console in scripts/ or src/", () => {
     expect(rawErrorLogs()).toEqual([]);
+  });
+
+  it("routes caught values through safeError before forwarding them", () => {
+    const hits = ROOTS.flatMap((root) => files(join(ROOT, root))).flatMap((file) =>
+      unsafeCaughtReferences(readFileSync(file, "utf8")).map((line) => `${relative(ROOT, file)}:${line}`));
+    expect(hits).toEqual([]);
+  });
+
+  it.each([
+    'try {} catch (caught) { console.error(caught); }',
+    'try {} catch (caught) { console.warn(`${caught.message}`); }',
+    'try {} catch (caught) { out.error = caught.message; } console.log(JSON.stringify(out));',
+    'task.catch((caught) => logger.warn(caught.request));',
+    'task.catch(async (caught) => log(caught.message));',
+  ])("detects unsafe caught-value flow %#", (code) => {
+    expect(unsafeCaughtReferences(code).length).toBeGreaterThan(0);
+  });
+
+  it("allows sanitized logs and silent recovery", () => {
+    expect(unsafeCaughtReferences('try {} catch (caught) { logger.warn(safeError(caught)); } task.catch(() => false);')).toEqual([]);
+  });
+
+  it("allows local classification without forwarding provider text", () => {
+    expect(unsafeCaughtReferences('try {} catch (caught) { if (caught instanceof Error && caught.message === "SLOT_TAKEN") return false; logger.warn(safeError(caught)); }')).toEqual([]);
   });
 });

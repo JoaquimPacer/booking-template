@@ -24,21 +24,28 @@ describe("JsonLd", () => {
     name: "</script><script>alert(1)</script>",
     description: "<!--<script>alert(2)//",
     alternateName: "</SCRIPT >",
+    commentEnd: "-->",
+    lineSeparator: String.fromCharCode(0x2028),
+    paragraphSeparator: String.fromCharCode(0x2029),
   };
 
-  it("emits exactly one script tag, opened and closed once, for hostile content", () => {
-    const html = render(hostile);
+  it("emits exactly one structured-data script element", () => {
+    const html = render({ "@context": "https://schema.org", name: "Example business" });
     expect(html.match(/<script/gi)).toHaveLength(1);
     expect(html.match(/<\/script/gi)).toHaveLength(1);
     expect(html.endsWith("</script>")).toBe(true);
   });
 
-  it("never lets an HTML comment opener into the script body", () => {
-    expect(body(render(hostile))).not.toContain("<!--");
-  });
-
-  it("puts no raw angle bracket anywhere inside the script body", () => {
-    expect(body(render(hostile))).not.toMatch(/[<>]/);
+  it.each([
+    ["script-close", "</script"],
+    ["comment-open", "<!--"],
+    ["comment-close", "-->"],
+    ["line-separator", String.fromCharCode(0x2028)],
+    ["paragraph-separator", String.fromCharCode(0x2029)],
+  ])("escapes %s in the rendered fixture", (_label, sequence) => {
+    // Both fixture coverage and escaping are required, independently per sequence.
+    const covered = Object.values(hostile).some((value) => value.toLowerCase().includes(sequence));
+    expect(covered && !body(render(hostile)).toLowerCase().includes(sequence)).toBe(true);
   });
 
   it("still parses back to the original data, so search engines read the real text", () => {

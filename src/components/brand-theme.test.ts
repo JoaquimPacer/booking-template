@@ -23,6 +23,120 @@ function cssVar(html: string, name: string) {
 }
 
 describe("BrandTheme", () => {
+  const fields = [
+    ["primaryColor", "--primary", "#4f6b5d"],
+    ["secondaryColor", "--secondary", "#e6e0d6"],
+    ["accentColor", "--accent", "#b08d57"],
+    ["backgroundColor", "--background", "#f7f4ef"],
+    ["foregroundColor", "--foreground", "#33302b"],
+  ];
+
+  for (const shape of ["object", "string"]) {
+    const input = (value: string) => shape === "object" ? { hex: value } : value;
+
+    it(`preserves every configured default color (${shape})`, () => {
+      for (const [field, variable, fallback] of fields) {
+        expect(cssVar(render({ [field]: input(fallback) }), variable)).toBe(fallback);
+      }
+    });
+
+    // Modern HSL permits numbers and percentages independently for both
+    // saturation and lightness. Legacy comma syntax still requires percentages.
+    const numericHsl = [
+      "hsl(180 50 50)", "hsla(180 50 50)",
+      "hsl(180 50% 50)", "hsla(180 50% 50)",
+      "hsl(180 50 50%)", "hsla(180 50 50%)",
+      "hsl(180deg 50 50 / .5)", "hsla(200grad 50 50 / 50%)",
+      "hsl(3.14rad 50% 50 / 50%)", "hsla(180deg 50% 50 / .5)",
+      "hsl(.5turn 50 50% / .5)", "hsla(.5turn 50 50% / 50%)",
+    ];
+    for (const [field, variable] of fields) {
+      it.each(numericHsl)(`preserves modern numeric HSL in ${field} (${shape}): %s`, (value) => {
+        expect(cssVar(render({ [field]: input(value) }), variable)).toBe(value);
+      });
+    }
+
+    it(`rejects numeric saturation or lightness in legacy comma HSL (${shape})`, () => {
+      for (const modern of numericHsl) {
+        const legacy = modern.replace(/\s*\/\s*|\s+/g, ", ");
+        for (const [field, variable, fallback] of fields) {
+          expect(cssVar(render({ [field]: input(legacy) }), variable)).toBe(fallback);
+        }
+      }
+    });
+
+    it(`rejects Unicode lookalikes in named colors (${shape})`, () => {
+      for (const value of ["blac\u212a", "dar\u212ablue"]) {
+        for (const [field, variable, fallback] of fields) {
+          expect(cssVar(render({ [field]: input(value) }), variable)).toBe(fallback);
+        }
+      }
+    });
+
+    it(`accepts CSS whitespace inside functions (${shape})`, () => {
+      for (const value of ["rgb(1\n2\n3)", "hsl(180deg,\n100%,\n50%)", "rgba(1\t2\f3 / .5)"]) {
+        for (const [field, variable] of fields) {
+          expect(cssVar(render({ [field]: input(value) }), variable)).toBe(value);
+        }
+      }
+    });
+
+    it(`rejects non-CSS whitespace (${shape})`, () => {
+      for (const value of ["rgb(1\u00a02 3)", "\u00a0red", "rgb(1\v2 3)"]) {
+        for (const [field, variable, fallback] of fields) {
+          expect(cssVar(render({ [field]: input(value) }), variable)).toBe(fallback);
+        }
+      }
+    });
+
+    it(`rejects mixed legacy RGB channel units (${shape})`, () => {
+      for (const value of ["rgb(1, 20%, 3)", "rgba(10%, 2, 30%, .5)"]) {
+        for (const [field, variable, fallback] of fields) {
+          expect(cssVar(render({ [field]: input(value) }), variable)).toBe(fallback);
+        }
+      }
+    });
+
+    it(`accepts semantic color grammar for every field (${shape})`, () => {
+      const valid = [
+        "RGB(1, 2, 3)", "hsl(180deg, 100%, 50%)", "hsl(0.5turn 100% 50%)",
+        "#abc", "#abcd", "#abcdef", "#abcdef12",
+        "rgb(1 2 3)", "rgba(1 2 3 / .5)", "rgb(10%, 20%, 30%, 50%)",
+        "rgba(10% 20% 30%)", "RGB(1 20% 3 / 50%)", "rgb(1e2 2 3)",
+        "hsl(3.14rad 100% 50%)", "hsla(200grad, 100%, 50%, 0.5)",
+        "HSLA(-180deg 100% 50% / 25%)", "hsl(+180 100% 50%)",
+        "AliceBlue", "rebeccapurple", "LightGoldenRodYellow", "TRANSPARENT", "currentColor",
+      ];
+      for (const value of valid) {
+        for (const [field, variable] of fields) {
+          expect(cssVar(render({ [field]: input(value) }), variable)).toBe(value);
+        }
+      }
+    });
+
+    it(`rejects malformed and hostile colors for every field (${shape})`, () => {
+      const invalid = [
+        "definitelynotacolor", "rgb(1)", "rgb(1,,2)", "a".repeat(100_000),
+        "rgb(1,2)", "rgb(1,2,3,4,5)", "rgb(1 2 3 4)", "rgb(1, 2 3)",
+        "rgb(1,2,3 / .5)", "rgb(1 2 3 /)", "rgb(1 2 3 / .5 / .6)",
+        "rgb(1..0 2 3)", "rgb(NaN 2 3)", "rgb(1e999 2 3)", "rgb(1deg 2 3)",
+        "hsl(180, 50, 50)", "hsl(180foo 50% 50%)", "hsl(180% 50% 50%)",
+        "hsl(0.5 turn 100% 50%)", "#12", "#12345", "#1234567", "#ggg",
+        "</style>", "<script>", "expression(url())", "red\"", "red'", "red;",
+        "red{", "red}", "red\\", "url(x)", "var(--brand)", "rgb(var(--x))",
+        "rgb(1 2 3)" + " ".repeat(65), "", "   ",
+      ];
+      for (const value of invalid) {
+        for (const [field, variable, fallback] of fields) {
+          const html = render({ [field]: input(value) });
+          expect(cssVar(html, variable)).toBe(fallback);
+          expect(html.match(/<\/style/gi)).toHaveLength(1);
+          expect(html).not.toMatch(/<script/i);
+        }
+      }
+    });
+  }
+
   const breakout = "red;}</style><script>alert(1)</script><style>";
 
   it("never lets a color value close the style tag (object shape)", () => {

@@ -3,18 +3,15 @@
 // @sanity/client cannot reach the API it throws an error that carries the
 // original request, headers included, so `console.error(err)` prints the
 // token into the terminal, CI logs and any transcript that captured the run.
-// safeError keeps exactly two things, a redacted message and a status code.
+// safeError keeps exactly two things, a fixed message and a status code.
 // If an assertion here fails, a credential can reach a log again.
 //
 // Every token below is a fake built at runtime, so this file holds nothing
 // shaped like a real key.
 
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { format } from "node:util";
-import { createClient } from "@sanity/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { REDACTED, redactSecrets, safeError } from "./redact";
+import { redactSecrets, safeError } from "./redact";
 
 const FAKE_TOKEN = ["sk", "TestOnly".repeat(4), "9f8e7d6c5b4a"].join("");
 const occurrences = (text: string) => text.split(FAKE_TOKEN).length - 1;
@@ -49,7 +46,7 @@ describe("safeError", () => {
 
     expect(lines).toHaveLength(1);
     expect(occurrences(lines[0])).toBe(0);
-    expect(lines[0]).toContain("ECONNREFUSED");
+    expect(lines[0]).toContain("Network request failed");
   });
 
   it("keeps only the message and the status code", () => {
@@ -57,7 +54,7 @@ describe("safeError", () => {
       statusCode: 401,
       response: { headers: { authorization: `Bearer ${FAKE_TOKEN}` } },
     });
-    expect(safeError(err)).toEqual({ message: "Unauthorized", status: 401 });
+    expect(safeError(err)).toEqual({ message: "Upstream request failed", status: 401 });
   });
 
   it("redacts a token that a provider put inside the message itself", () => {
@@ -66,13 +63,13 @@ describe("safeError", () => {
     );
     const safe = safeError(err);
     expect(occurrences(safe.message)).toBe(0);
-    expect(safe.message).toContain(REDACTED);
-    expect(safe.status).toBe("unknown");
+    expect(safe.message).toBe("Unknown error");
+    expect(safe.status).toBe(0);
   });
 
   it("describes a non-Error throw without dumping it", () => {
     const thrown = { headers: { authorization: `Bearer ${FAKE_TOKEN}` } };
-    expect(safeError(thrown)).toEqual({ message: "unknown", status: "unknown" });
+    expect(safeError(thrown)).toEqual({ message: "Unknown error", status: 0 });
   });
 
   it("redacts a bare Sanity-style token and credentials inside a URL", () => {
@@ -81,29 +78,72 @@ describe("safeError", () => {
     expect(occurrences(redactSecrets(text))).toBe(0);
   });
 
-  it("keeps the token out of the log for a real @sanity/client network failure", async () => {
-    // A port that was just freed, so the request is refused immediately.
-    const server = createServer();
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const { port } = server.address() as AddressInfo;
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+  it("keeps an attached request out of a synthetic client network failure log", () => {
+    expect(occurrences(format(safeError(errorCarryingRequest("fetch failed"))))).toBe(0);
+  });
+});
 
-    const client = createClient({
-      projectId: "abc123de",
-      dataset: "production",
-      apiVersion: "2024-01-01",
-      token: FAKE_TOKEN,
-      useCdn: false,
-      apiHost: `http://127.0.0.1:${port}`,
-      useProjectHostname: false,
-      maxRetries: 0,
-    });
+describe("safeError numeric status regressions", () => {
+  it.each([
+    ["missing", undefined],
+    ["null", null],
+    ["NaN", NaN],
+    ["positive infinity", Infinity],
+    ["negative infinity", -Infinity],
+    ["fraction", 401.5],
+    ["numeric string", "401"],
+    ["negative", -1],
+    ["below HTTP range", 99],
+    ["above HTTP range", 600],
+  ])("uses numeric sentinel for %s", (_label, candidate) => {
+    for (const property of ["statusCode", "status"]) {
+      const status = safeError(Object.assign(new Error("failure"), { [property]: candidate })).status;
+      expect(status).toBe(0);
+      expect(Number.isInteger(status) && Number.isFinite(status)).toBe(true);
+    }
+  });
+});
 
-    const caught = await client.fetch("*[0]").then(
-      () => null,
-      (error: unknown) => error,
-    );
-    expect(caught).toBeInstanceOf(Error);
-    expect(occurrences(format(safeError(caught)))).toBe(0);
+describe("safeError message allowlist regressions", () => {
+  const synthetic = ["Verifier", "Synthetic"].join("");
+  const messages = [
+    ["key URL", `GET https://example.invalid/test?key=${synthetic} failed`],
+    ["signed URL", `GET https://example.invalid/test?signature=${synthetic} failed`],
+    ["Basic authorization", `Authorization: Basic ${synthetic}`],
+    ["Bearer authorization", `Authorization: Bearer ${synthetic}`],
+    ["request body", `Request body: {"password":"${synthetic}"}`],
+    ["unlabelled body text", `Rejected body ${synthetic}`],
+  ];
+
+  it.each(messages)("never forwards provider text: %s", (_label, message) => {
+    // Compare booleans so a failing regression never prints the input value.
+    expect(safeError(new Error(message)).message === "Unknown error").toBe(true);
+  });
+
+  it("never forwards a long provider message", () => {
+    const safe = safeError(new Error(synthetic.repeat(10_000)));
+    expect(safe.message === "Unknown error" && safe.status === 0).toBe(true);
+  });
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["string", synthetic],
+    ["number", 42],
+  ])("handles a %s throw without forwarding it", (_label, thrown) => {
+    expect(safeError(thrown)).toEqual({ message: "Unknown error", status: 0 });
+  });
+
+  it.each([
+    ["connection", { code: "ECONNREFUSED" }, "Network request failed"],
+    ["DNS", { code: "ENOTFOUND" }, "Network request failed"],
+    ["timeout code", { code: "ETIMEDOUT" }, "Request timed out"],
+    ["timeout name", { name: "TimeoutError" }, "Request timed out"],
+    ["upstream", { statusCode: 503 }, "Upstream request failed"],
+    ["validation", { name: "ZodError" }, "Validation failed"],
+    ["unknown", {}, "Unknown error"],
+  ])("classifies %s without forwarding text", (_label, properties, expected) => {
+    const error = Object.assign(new Error(synthetic), properties);
+    expect(safeError(error).message === expected).toBe(true);
   });
 });

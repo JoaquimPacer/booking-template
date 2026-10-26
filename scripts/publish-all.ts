@@ -82,7 +82,7 @@ async function main() {
       console.log(`  published ${publishedId}`);
       ok++;
     } catch (e) {
-      console.error(`  FAILED ${publishedId}:`, e instanceof Error ? e.message : e);
+      console.error(`  FAILED ${publishedId}:`, safeError(e));
     }
   }
   console.log("");

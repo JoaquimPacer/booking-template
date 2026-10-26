@@ -100,7 +100,7 @@ async function main() {
         await sanityWrite.delete(target);
         console.log(`deleted ${target}`);
       } catch (e) {
-        console.error(`could NOT delete ${target}: ${(e as Error).message}`);
+        console.error(`could NOT delete ${target}:`, safeError(e));
       }
     }
   }
