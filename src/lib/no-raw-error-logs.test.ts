@@ -190,6 +190,21 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return !!node && ts.isAwaitExpression(unwrap(node)) && !allowlisted(node);
   }
 
+  // A provider result, awaited here or held in a name declared with one.
+  function heldResult(node: ts.Expression | undefined): boolean {
+    const value = node && unwrap(node);
+    if (!value || !ts.isIdentifier(value)) return providerResult(node);
+    const name = value.text;
+    let held = false;
+    function look(child: ts.Node) {
+      if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name) && child.name.text === name &&
+        providerResult(child.initializer)) held = true;
+      ts.forEachChild(child, look);
+    }
+    look(source);
+    return held;
+  }
+
   // The name in x.name or x["name"].
   function memberName(node: ts.Node): string | undefined {
     if (ts.isPropertyAccessExpression(node)) return node.name.text;
@@ -228,7 +243,8 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     const property = node.parent;
     const literal = property.parent;
     const target = (ts.isShorthandPropertyAssignment(property) && property.name === node) ||
-      (ts.isPropertyAssignment(property) && property.initializer === node);
+      (ts.isPropertyAssignment(property) && property.initializer === node) ||
+      (ts.isSpreadAssignment(property) && property.expression === node);
     return target && ts.isObjectLiteralExpression(literal) && ts.isBinaryExpression(literal.parent) &&
       literal.parent.left === literal && literal.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken;
   }
@@ -245,9 +261,14 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return true;
   }
 
-  function inspect(scope: ts.Node, name: string) {
+  // Held whole (a rest, a .then success value), a value fails where it is
+  // passed on as it is. A member read does not pass it on (inspectErrorReads
+  // audits .error), nor does a JSX spread: that component is audited where declared.
+  function inspect(scope: ts.Node, name: string, whole = false) {
     function visit(node: ts.Node) {
-      if (ts.isIdentifier(node) && node.text === name && isReference(node) && forwarded(node)) hit(node);
+      if (ts.isIdentifier(node) && node.text === name && isReference(node) && forwarded(node) &&
+        !(whole && (ts.isJsxSpreadAttribute(node.parent) || ((ts.isPropertyAccessExpression(node.parent) ||
+          ts.isElementAccessExpression(node.parent)) && node.parent.expression === node)))) hit(node);
       ts.forEachChild(node, visit);
     }
     visit(scope);
@@ -337,14 +358,17 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return scope;
   }
 
-  function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node) {
+  function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node, held = false) {
     for (const element of pattern.elements) {
       // A rest element keeps error along with every other unnamed property.
-      // Named error (or, beside allSettled, reason), it is also logged whole.
+      // Named error (or, beside allSettled, reason), it is also logged whole;
+      // so is one of any name held from a provider result.
       if (element.dotDotDotToken) {
         if (ts.isIdentifier(element.name)) {
-          inspectErrorReads(scope, element.name.text);
-          if (exposes(element.name)) inspect(scope, element.name.text);
+          const rest = element.name.text;
+          inspectErrorReads(scope, rest);
+          if (exposes(element.name)) inspect(scope, rest);
+          else if (held) inspect(scope, rest, true);
         }
         continue;
       }
@@ -352,7 +376,7 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
         // A nested pattern ({ data: { error } }) reaches error one level down.
         // Open: an array pattern ([{ error }]) is not followed, here or as a
         // declaration; the review named only object nesting, so it waits.
-        if (ts.isObjectBindingPattern(element.name)) inspectPattern(element.name, scope);
+        if (ts.isObjectBindingPattern(element.name)) inspectPattern(element.name, scope, held);
         continue;
       }
       if (ts.isIdentifier(element.name)) inspect(scope, element.name.text);
@@ -360,10 +384,12 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     }
   }
 
-  // A provider result bound to a name or a pattern.
+  // A provider result bound to a name or a pattern, held whole.
   function inspectResult(binding: ts.BindingName | undefined, scope: ts.Node) {
-    if (binding && ts.isIdentifier(binding)) inspectErrorReads(scope, binding.text);
-    else if (binding && ts.isObjectBindingPattern(binding)) inspectPattern(binding, scope);
+    if (binding && ts.isIdentifier(binding)) {
+      inspectErrorReads(scope, binding.text);
+      inspect(scope, binding.text, true);
+    } else if (binding && ts.isObjectBindingPattern(binding)) inspectPattern(binding, scope, true);
   }
 
   function find(node: ts.Node) {
@@ -405,14 +431,16 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     // A provider result's { error } (Resend, for one) is a caught value too,
     // in a declaration or for-of, a .then success parameter, or an assignment.
     if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name)) {
-      inspectPattern(node.name, enclosingBlock(node));
+      const loop = node.parent.parent;
+      inspectPattern(node.name, enclosingBlock(node), heldResult(ts.isForOfStatement(loop) ? loop.expression : node.initializer));
     }
     // A parameter pattern pulls error out of whatever the caller passes, a
     // provider result included (a forEach over sends, a helper, a .then
     // handler, a JSX spread into a component), so it counts in every function,
     // whatever its name, return or use. In a boundary file so does props.error.
+    // Its rest is held whole: passed on other than by a JSX spread, it fails.
     if (ts.isParameter(node) && "body" in node.parent && node.parent.body) {
-      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body);
+      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body, true);
       else if (boundary && ts.isIdentifier(node.name)) inspectErrorReads(node.parent.body, node.name.text);
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
@@ -423,6 +451,12 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
         } else if (ts.isPropertyAssignment(property) && exposes(property.name)) {
           if (ts.isIdentifier(property.initializer)) inspect(enclosingBlock(node), property.initializer.text);
           else hit(property);
+        } else if (ts.isSpreadAssignment(property) && ts.isIdentifier(property.expression)) {
+          // ({ data, ...rest } = result) is a rest element, audited as one.
+          const rest = property.expression.text;
+          inspectErrorReads(enclosingBlock(node), rest);
+          if (exposes(property.expression)) inspect(enclosingBlock(node), rest);
+          else if (heldResult(node.right)) inspect(enclosingBlock(node), rest, true);
         }
       }
     }
@@ -766,6 +800,22 @@ describe("error logging", () => {
     ["Q05c process.on(\"unhandledRejection\", null)", 'process.on("unhandledRejection", null);', "src/components/send-status.tsx"],
     ["Q05d task.catch(null, handler), whose second argument catch ignores", 'task.catch(null, (caught) => logger.error("failed", caught));', "src/components/send-status.tsx"],
   ])("flags %s, by design", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Raw shapes open on every version before the tenth: a rest held from a
+  // provider result (declared, iterated, assigned or a parameter) or a .then
+  // success value, passed on whole under a name other than error.
+  it.each([
+    ["Q02 a declaration rest named err, logged whole", 'export async function notify(m) { const { data, ...err } = await resend.emails.send(m); logger.error("send failed", err); }', "src/components/send-status.tsx"],
+    ["Q02c a declaration rest named fault, logged whole", 'export async function notify(m) { const { data, ...fault } = await resend.emails.send(m); logger.error("send failed", fault); }', "src/components/send-status.tsx"],
+    ["Q02d a declaration rest named fault, to console.error", 'export async function notify(m) { const { data, ...fault } = await resend.emails.send(m); console.error("send failed", fault); }', "src/components/send-status.tsx"],
+    ["Q02e a parameter rest named err, logged whole", 'function LogReply({ data, ...err }) { logger.error("send failed", err); }\nexport async function notify(m) { LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Q09c a for-of rest named rest over held results, logged whole", 'export async function notifyAll(ms) { const replies = await Promise.all(ms.map((m) => resend.emails.send(m))); for (const { data, ...rest } of replies) logger.error("send failed", rest); }', "src/components/send-status.tsx"],
+    ["N14 a declaration rest named rest, logged whole", 'export async function notify(m) { const { data, ...rest } = await resend.emails.send(m); logger.error("send failed", rest); }', "src/components/send-status.tsx"],
+    ["Q11 an assignment pattern ({ data, ...error } = await send)", 'export async function notify(m) { let data, error; ({ data, ...error } = await resend.emails.send(m)); logger.error("send failed", error); }', "src/components/send-status.tsx"],
+    ["Q04e a .then success handler logging the reply whole", 'function onOk(reply) { logger.error("sent", reply); }\nexport function notify(m) { resend.emails.send(m).then(onOk); }', "src/components/send-status.tsx"],
+  ])("detects %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
