@@ -79,12 +79,12 @@ function literalPieces(node: ts.Expression): string[] {
 /**
  * Lines that load TypeScript: static imports, re-exports, import(), require()
  * and any other call or new expression whose first argument is a TypeScript
- * literal. A joined name with a TypeScript piece counts only where it is
- * loaded: new Worker (through new URL, inline or hoisted), module.register, or
- * a require made by createRequire under any name. Handed to readFileSync it is
- * a file read. A console call only prints its text. A specifier for import()
- * or require() that is not a string literal cannot be checked, so it counts as
- * a hit too.
+ * literal, new URL aside. A joined name with a TypeScript piece, or any such
+ * name inside new URL, counts only where it is loaded: new Worker (through new
+ * URL, inline or hoisted), module.register, or a require made by createRequire
+ * under any name. Handed to readFileSync it is a file read. A console call
+ * only prints its text. A specifier for import() or require() that is not a
+ * string literal cannot be checked, so it counts as a hit too.
  */
 function typeScriptImports(file: string, text: string, seen = new Set([resolve(file)])): number[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
@@ -148,15 +148,15 @@ function typeScriptImports(file: string, text: string, seen = new Set([resolve(f
         node.expression.expression.text === "console";
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
         (ts.isIdentifier(node.expression) && node.expression.text === "require")) target = first;
-      // createRequire's require, module.register, new URL (for new Worker) or a
-      // wrapper loads a literal .ts path too.
-      else if (first && !consoleCall && ts.isStringLiteralLike(first) && TYPESCRIPT.test(bare(first.text))) target = first;
-      // A loader's joined name, read through new URL(name, base). A literal
-      // there is caught above, on the call or on new URL itself. A hoisted
-      // name is read through what it was declared or assigned as.
+      // createRequire's require, module.register or a wrapper loads a literal
+      // .ts path too. new URL alone does not: a file read takes one as well.
+      else if (first && !consoleCall && urlName(node as ts.Expression) === node && ts.isStringLiteralLike(first) && TYPESCRIPT.test(bare(first.text))) target = first;
+      // A loader's name, literal or joined, read through new URL(name, base).
+      // A bare literal is caught above, on the call. A hoisted name is read
+      // through what it was declared or assigned as.
       else if (first && loader(node)) {
         const name = urlName(first);
-        if (!ts.isStringLiteralLike(name) && loadsPiece(name)) target = name;
+        if (loadsPiece(name)) target = name;
         else if (ts.isIdentifier(first) && (values.get(first.text) ?? []).some((value) => loadsPiece(urlName(value)))) target = first;
       }
     }
@@ -305,6 +305,10 @@ describe("scripts that run under plain Node", () => {
       ["Q01 readFileSync of a template new URL .ts", 'const text = readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8");'],
       ["Q02 cpSync of a + joined .ts path", 'cpSync(src + "/json-ld.ts", dest);'],
       ["Q03 createRequire loading a package by a joined name", 'const load = createRequire(import.meta.url);\nload("type" + "script");'],
+      // The sixth version's review: a literal .ts name in new URL, read as a file.
+      ["W09 readFileSync of a literal new URL .ts", 'import fs from "node:fs";\nconst text = fs.readFileSync(new URL("./x.ts", import.meta.url), "utf8");'],
+      ["W10 readFileSync of fileURLToPath(new URL(literal .ts))", 'const text = readFileSync(fileURLToPath(new URL("./x.ts", import.meta.url)), "utf8");'],
+      ["W11 readFileSync of a hoisted literal new URL .ts", 'const url = new URL("./x.ts", import.meta.url);\nconst text = readFileSync(url, "utf8");'],
     ])("allows %s", (_shape, code) => {
       expect(typeScriptImports(join(dir, "entry.cjs"), code)).toEqual([]);
     });

@@ -101,8 +101,13 @@ function rawErrorLogs(): string[] {
 // assigned, cast or not, or in a .then success handler, inline or passed by
 // name). A component, a function with a PascalCase name or a JSX return, gets
 // its error prop from its parent, usually form text as in FieldError({ error }).
-// A function handed inline to a call (memo and forwardRef aside) or called by
-// name in its file is not a component, whatever its name or return. Only in
+// A function its file uses as a function is not a component, whatever its name
+// or return. That is one handed inline to a call, or one that, under its own
+// name or its const's, is called (directly, through parentheses, or by .call,
+// .apply or .bind) or passed to a call. memo and forwardRef, bare or as
+// React.memo and React.forwardRef, keep a component one. Open, the G03 trade:
+// a helper exported and called only from another file (V06) still reads as a
+// component here, because a one-file rule cannot see that caller. Only in
 // error.tsx and global-error.tsx, where Next.js passes the caught value, is a
 // component's error prop audited, destructured or read as props.error.
 // Each is checked the same way. A destructured catch or handler parameter
@@ -197,7 +202,8 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   }
 
   // A caught value may be wrapped by safeError, type-checked, compared to a
-  // known message, or tested for presence. Anything else forwards it.
+  // known message, or tested for presence (if, !, Boolean()). Anything else
+  // forwards it.
   function forwarded(value: ts.Expression): boolean {
     const parent = value.parent;
     const safe = ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) &&
@@ -211,7 +217,9 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       comparison.left === parent && ts.isStringLiteral(comparison.right) &&
       [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(comparison.operatorToken.kind);
     const presence = (ts.isIfStatement(parent) && parent.expression === value) ||
-      (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken);
+      (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken) ||
+      (ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) && parent.expression.text === "Boolean" &&
+        parent.arguments.length === 1 && parent.arguments[0] === value);
     // A hook's dependency list only tells React when to rerun; it forwards nothing.
     const dependency = ts.isArrayLiteralExpression(parent) && ts.isCallExpression(parent.parent) &&
       parent.parent.arguments[1] === parent && ts.isIdentifier(parent.parent.expression) &&
@@ -360,16 +368,31 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   // A component: a PascalCase name (its own, or the const it is assigned to)
   // or a return value with JSX in it. Not one, whatever its name or return:
   // a function handed inline to a call (replies.map(({ error }) => <li />)),
-  // memo and forwardRef aside, or one the file calls by name (LogReply(reply)).
+  // memo and forwardRef aside, or one the file calls or passes by either name
+  // (LogReply(reply), (LogReply)(reply), LogReply.call(null, reply), replies.map(LogReply)).
   function componentShaped(fn: ts.FunctionLikeDeclaration): boolean {
     const name = (ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name ? fn.name.text
       : ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : "";
-    const wrapper = ts.isCallExpression(fn.parent) && ts.isIdentifier(fn.parent.expression) &&
-      ["memo", "forwardRef"].includes(fn.parent.expression.text);
-    if (ts.isCallExpression(fn.parent) && !wrapper) return false;
-    const calledByName = (node: ts.Node): boolean => (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
-      node.expression.text === name) || !!ts.forEachChild(node, calledByName);
-    if (name && calledByName(source)) return false;
+    const names = new Set([name, ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : ""].filter(Boolean));
+    const wraps = (call: ts.CallExpression): boolean => {
+      const callee = call.expression;
+      const text = ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : "";
+      return ["memo", "forwardRef"].includes(text);
+    };
+    if (ts.isCallExpression(fn.parent) && !wraps(fn.parent)) return false;
+    const usedAsFunction = (node: ts.Node): boolean => {
+      if (ts.isIdentifier(node) && names.has(node.text)) {
+        let child: ts.Node = node;
+        while (ts.isParenthesizedExpression(child.parent)) child = child.parent;
+        const parent = child.parent;
+        if (ts.isCallExpression(parent) && (parent.expression === child ||
+          (parent.arguments.some((argument) => argument === child) && !wraps(parent)))) return true;
+        if (ts.isPropertyAccessExpression(parent) && parent.expression === child &&
+          ["call", "apply", "bind"].includes(parent.name.text)) return true;
+      }
+      return !!ts.forEachChild(node, usedAsFunction);
+    };
+    if (names.size && usedAsFunction(source)) return false;
     if (COMPONENT_NAME.test(name)) return true;
     const jsx = (node: ts.Node): boolean =>
       ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node) || !!ts.forEachChild(node, jsx);
@@ -642,6 +665,31 @@ describe("error logging", () => {
     ["a lower-case arrow component returning JSX", 'const fieldHint = ({ error }) => <small>{error}</small>;', "src/components/field-hint.tsx"],
     ["a memo-wrapped component with a form-text error prop", 'export const FieldNote = memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
     ["a getDerivedStateFromError that keeps only a flag", 'class Boundary extends Component { static getDerivedStateFromError() { return { failed: true }; } }', "src/components/send-status.tsx"],
+  ])("allows %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file)).toEqual([]);
+  });
+
+  // Raw shapes from the sixth version's review. Each helper is passed by name
+  // to forEach or .map, called under its const's name, or called through
+  // parentheses or .call, so its file uses it as a function, not a component.
+  it.each([
+    ["V12 a PascalCase helper passed by name to forEach over sends", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notifyAll(ms) {\n  const replies = await Promise.all(ms.map((m) => resend.emails.send(m)));\n  replies.forEach(LogReply);\n}', "src/components/send-status.tsx"],
+    ["V13 a JSX render helper passed by name to .map over sends", 'function renderReply({ error }) { if (error) logger.error("send failed", error); return <li>sent</li>; }\nexport default async function Page() {\n  const replies = await Promise.all(ms.map((m) => resend.emails.send(m)));\n  return <ul>{replies.map(renderReply)}</ul>;\n}', "src/app/book/[slug]/page.tsx"],
+    ["V19 a PascalCase const arrow passed by name to .map, logging and returning JSX", 'const ReplyRow = ({ error }) => { if (error) logger.error("send failed", error); return <li>sent</li>; };\nexport default async function Page() {\n  const replies = await Promise.all(ms.map((m) => resend.emails.send(m)));\n  return <ul>{replies.map(ReplyRow)}</ul>;\n}', "src/app/book/[slug]/page.tsx"],
+    ["V14 a function expression named differently from its const", 'const logReply = function LogReply({ error }) { if (error) logger.error("send failed", error); };\nexport async function notify(m) { logReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["V15 a PascalCase helper called through parentheses", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { (LogReply)(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["V16 a PascalCase helper called with .call", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { LogReply.call(null, await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Benign shapes from the same review: memo and forwardRef written as
+  // React.memo and React.forwardRef keep a component one, and Boolean(fault)
+  // keeps only a flag, as !!fault does.
+  it.each([
+    ["V01 a React.memo-wrapped arrow component with a form-text error prop", 'export const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    ["V03 a React.forwardRef named function expression", 'export const Field = React.forwardRef(function Field({ error }, ref) { return <label ref={ref}>{error}</label>; });', "src/components/field.tsx"],
+    ["V10c a getDerivedStateFromError flag set through Boolean(fault)", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: Boolean(fault) }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
   });
