@@ -8,6 +8,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 interface Row {
   _id: string;
@@ -37,6 +38,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

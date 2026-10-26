@@ -46,7 +46,7 @@ try {
   const sitemapUrl = new URL("/sitemap.xml", site).href;
   const res = await fetch(sitemapUrl, { signal: AbortSignal.timeout(20000) });
   if (!res.ok) {
-    log(`skip: live sitemap not reachable yet (${res.status} from ${sitemapUrl})`);
+    log(`skip: live sitemap not reachable yet (${res.status})`);
     process.exit(0);
   }
   const xml = await res.text();
@@ -70,8 +70,10 @@ try {
   });
   // 200/202 = accepted. 403 = key file mismatch. 422 = URLs don't match host.
   log(`submitted ${urls.length} URLs for ${host}: HTTP ${submit.status}`);
-} catch (err) {
-  // Never fail a deploy over a ping.
-  log(`skip: ${err?.message ?? err}`);
+} catch {
+  // Never fail a deploy over a ping. Fixed text only: a fetch error can quote
+  // the request, and plain Node scripts must not import TypeScript (see
+  // src/lib/script-imports.test.ts), so safeError is out of reach here.
+  console.warn("[indexnow] skip: submission failed");
 }
 process.exit(0);

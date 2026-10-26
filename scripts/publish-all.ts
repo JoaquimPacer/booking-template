@@ -21,6 +21,7 @@
 import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 interface DraftRow {
   _id: string; // "drafts.<publishedId>"
@@ -81,7 +82,7 @@ async function main() {
       console.log(`  published ${publishedId}`);
       ok++;
     } catch (e) {
-      console.error(`  FAILED ${publishedId}:`, e instanceof Error ? e.message : e);
+      console.error(`  FAILED ${publishedId}:`, safeError(e));
     }
   }
   console.log("");
@@ -90,6 +91,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Publish-all failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

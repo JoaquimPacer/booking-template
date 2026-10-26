@@ -10,6 +10,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const PARTS: Record<string, string> = {
   "contact.addressLocality": "Austin",
@@ -46,6 +47,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error(safeError(e));
   process.exit(1);
 });

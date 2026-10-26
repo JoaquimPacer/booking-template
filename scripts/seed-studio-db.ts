@@ -20,6 +20,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const STUDIO_SLUG = "theresa-attea";
 const STUDIO_TIMEZONE = "America/Chicago"; // Austin, TX
@@ -59,7 +60,7 @@ async function main() {
   );
   const syncable = services.filter((s) => typeof s.durationMinutes === "number");
 
-  console.log(`Database target: ${process.env.DATABASE_URL?.replace(/:[^:@/]+@/, ":***@") ?? "(unset)"}`);
+  console.log(`Database target: ${process.env.DATABASE_URL ? "configured" : "unset"}`);
   console.log(`Studio: ${siteName ?? "Theresa Attea, LMT"} (${STUDIO_SLUG}, ${STUDIO_TIMEZONE})`);
   console.log(`Weekly hour rules: ${WEEKLY_HOURS.length}`);
   console.log(`Services to sync (have a duration): ${syncable.length} of ${services.length}`);
@@ -118,6 +119,6 @@ async function main() {
 
 main().catch(async (err) => {
   console.error("DB seed failed:");
-  console.error(err);
+  console.error(safeError(err));
   process.exit(1);
 });

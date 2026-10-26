@@ -9,6 +9,7 @@
 
 import "dotenv/config";
 import { groq } from "next-sanity";
+import { safeError } from "../src/lib/redact";
 
 const VALUE = "$135-$185";
 
@@ -40,6 +41,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error(safeError(e));
   process.exit(1);
 });
