@@ -57,10 +57,11 @@ function followsToTypeScript(target: string, seen: Set<string>): boolean {
 }
 
 /**
- * The literal pieces of a name joined with + or a template: "./leaf" + ".ts".
- * A joined name with no piece ending in a TypeScript extension (dir + name)
- * cannot be resolved here, and flagging every joined path would flag ordinary
- * file reads, so it passes. import() and require() fail on any such name.
+ * The literal pieces of a name joined with +, a template, or a join or resolve
+ * call: "./leaf" + ".ts", join(here, "leaf.ts"). A joined name with no piece
+ * ending in a TypeScript extension (dir + name) cannot be resolved here, and
+ * flagging every joined path would flag ordinary file reads, so it passes.
+ * import() and require() fail on any such name.
  */
 function literalPieces(node: ts.Expression): string[] {
   if (ts.isStringLiteralLike(node)) return [node.text];
@@ -69,42 +70,74 @@ function literalPieces(node: ts.Expression): string[] {
     return [...literalPieces(node.left), ...literalPieces(node.right)];
   }
   if (ts.isTemplateExpression(node)) return [node.head.text, ...node.templateSpans.map((span) => span.literal.text)];
+  const callee = ts.isCallExpression(node) ? node.expression : undefined;
+  const method = callee && (ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : "");
+  if (ts.isCallExpression(node) && (method === "join" || method === "resolve")) return node.arguments.flatMap(literalPieces);
   return [];
-}
-
-/** createRequire(...), called bare or as module.createRequire. */
-function isCreateRequire(node: ts.Node): boolean {
-  return ts.isCallExpression(node) && (ts.isIdentifier(node.expression) ? node.expression.text === "createRequire"
-    : ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "createRequire");
 }
 
 /**
  * Lines that load TypeScript: static imports, re-exports, import(), require()
  * and any other call or new expression whose first argument is a TypeScript
  * literal. A joined name with a TypeScript piece counts only where it is
- * loaded: new Worker (through new URL), module.register, or a require made by
- * createRequire. Handed to readFileSync it is a file read. A console call only
- * prints its text. A specifier for import() or require() that is not a string
- * literal cannot be checked, so it counts as a hit too.
+ * loaded: new Worker (through new URL, inline or hoisted), module.register, or
+ * a require made by createRequire under any name. Handed to readFileSync it is
+ * a file read. A console call only prints its text. A specifier for import()
+ * or require() that is not a string literal cannot be checked, so it counts as
+ * a hit too.
  */
 function typeScriptImports(file: string, text: string, seen = new Set([resolve(file)])): number[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const hits: number[] = [];
-  // Names bound to a require made by createRequire: const load = createRequire(import.meta.url).
+  // What each name is declared or assigned as, so a loader handed a hoisted
+  // name (const url = new URL(...); new Worker(url)) is read through it.
+  const values = new Map<string, ts.Expression[]>();
+  // createRequire under any name (import { createRequire as make }, const
+  // { createRequire: make } = module, const make = module.createRequire) and
+  // the names its require is bound to, declared, re-bound or assigned later:
+  // const load = createRequire(import.meta.url); let again; again = load.
+  const creators = new Set(["createRequire"]);
   const requires = new Set<string>();
   function bind(node: ts.Node) {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && isCreateRequire(node.initializer)) {
-      requires.add(node.name.text);
+    const add = (name: string, value: ts.Expression) => values.set(name, [...(values.get(name) ?? []), value]);
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) add(node.name.text, node.initializer);
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left)) {
+      add(node.left.text, node.right);
+    }
+    if ((ts.isBindingElement(node) || ts.isImportSpecifier(node)) && ts.isIdentifier(node.name)) {
+      const imported = node.propertyName ?? node.name;
+      if ((ts.isIdentifier(imported) || ts.isStringLiteral(imported)) && imported.text === "createRequire") creators.add(node.name.text);
     }
     ts.forEachChild(node, bind);
   }
   bind(source);
+  /** createRequire(...), called under any of its names or as module.createRequire. */
+  function isCreateRequire(node: ts.Node): boolean {
+    return ts.isCallExpression(node) && (ts.isIdentifier(node.expression) ? creators.has(node.expression.text)
+      : ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "createRequire");
+  }
+  // A name bound through several others settles in a few passes.
+  for (let size = -1; size !== creators.size + requires.size;) {
+    size = creators.size + requires.size;
+    for (const [name, list] of values) for (const value of list) {
+      if (isCreateRequire(value) || (ts.isIdentifier(value) && requires.has(value.text))) requires.add(name);
+      if ((ts.isIdentifier(value) && creators.has(value.text)) ||
+        (ts.isPropertyAccessExpression(value) && value.name.text === "createRequire")) creators.add(name);
+    }
+  }
   function loader(node: ts.CallExpression | ts.NewExpression): boolean {
     const callee = node.expression;
-    if (ts.isNewExpression(node)) return ts.isIdentifier(callee) && callee.text === "Worker";
+    // new Worker, or worker_threads under any name: new threads.Worker.
+    if (ts.isNewExpression(node)) {
+      return ts.isIdentifier(callee) ? callee.text === "Worker" : ts.isPropertyAccessExpression(callee) && callee.name.text === "Worker";
+    }
     return isCreateRequire(callee) || (ts.isIdentifier(callee) && (requires.has(callee.text) || callee.text === "register")) ||
       (ts.isPropertyAccessExpression(callee) && callee.name.text === "register");
   }
+  const loadsPiece = (node: ts.Expression) => literalPieces(node).some((piece) => TYPESCRIPT.test(bare(piece)));
+  // new URL(name, base) is read as its name.
+  const urlName = (node: ts.Expression) => ts.isNewExpression(node) && ts.isIdentifier(node.expression) &&
+    node.expression.text === "URL" && node.arguments?.[0] ? node.arguments[0] : node;
   function visit(node: ts.Node) {
     let target: ts.Expression | undefined;
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
@@ -119,11 +152,12 @@ function typeScriptImports(file: string, text: string, seen = new Set([resolve(f
       // wrapper loads a literal .ts path too.
       else if (first && !consoleCall && ts.isStringLiteralLike(first) && TYPESCRIPT.test(bare(first.text))) target = first;
       // A loader's joined name, read through new URL(name, base). A literal
-      // there is caught above, on the call or on new URL itself.
+      // there is caught above, on the call or on new URL itself. A hoisted
+      // name is read through what it was declared or assigned as.
       else if (first && loader(node)) {
-        const name = ts.isNewExpression(first) && ts.isIdentifier(first.expression) && first.expression.text === "URL" &&
-          first.arguments?.[0] ? first.arguments[0] : first;
-        if (!ts.isStringLiteralLike(name) && literalPieces(name).some((piece) => TYPESCRIPT.test(bare(piece)))) target = name;
+        const name = urlName(first);
+        if (!ts.isStringLiteralLike(name) && loadsPiece(name)) target = name;
+        else if (ts.isIdentifier(first) && (values.get(first.text) ?? []).some((value) => loadsPiece(urlName(value)))) target = first;
       }
     }
     if (target && (!ts.isStringLiteralLike(target) || loadsTypeScript(file, target.text, seen))) {
@@ -244,6 +278,14 @@ describe("scripts that run under plain Node", () => {
       ["a template URL for new Worker", 'new Worker(new URL(`./${name}.mts`, import.meta.url));'],
       ["a joined name for module.register", 'module.register("./" + "hooks.ts", pathToFileURL("./"));'],
       ["a template name for createRequire called in place", 'createRequire(import.meta.url)(`./${name}.ts`);'],
+      // The fifth version's review: a loader reached through another name, or a path.join name.
+      ["J04 createRequire's require with path.join(here, leaf.ts)", 'const load = createRequire(import.meta.url);\nload(join(here, "leaf.ts"));'],
+      ["J05 createRequire renamed by destructuring", 'const { createRequire: makeRequire } = module;\nconst load = makeRequire(import.meta.url);\nload("./" + "leaf.ts");'],
+      ["createRequire renamed on import", 'import { createRequire as makeRequire } from "node:module";\nconst load = makeRequire(import.meta.url);\nload("./" + "leaf.ts");'],
+      ["J06 createRequire's require re-bound", 'const load = createRequire(import.meta.url);\nconst again = load;\nagain("./" + "leaf.ts");'],
+      ["J07 createRequire's require assigned later (let)", 'let load;\nload = createRequire(import.meta.url);\nload("./" + "leaf.ts");'],
+      ["J10 new Worker on a hoisted template URL", 'const url = new URL(`./${name}.ts`, import.meta.url);\nnew Worker(url);'],
+      ["J11 a worker_threads namespace Worker with a template path", 'new threads.Worker(`./${name}.ts`);'],
     ])("detects %s", (_shape, code) => {
       expect(typeScriptImports(join(dir, "entry.cjs"), code).length).toBeGreaterThan(0);
     });
@@ -260,6 +302,9 @@ describe("scripts that run under plain Node", () => {
       ["P09 a json import with attributes", 'import data from "./data.json" with { type: "json" };'],
       ["a joined new URL read as a file", 'const url = new URL("./" + "json-ld.ts", import.meta.url);\nconst text = readFileSync(url, "utf8");'],
       ["writeFileSync of a + joined .ts path", 'writeFileSync(workDir + "/json-ld.ts", text);'],
+      ["Q01 readFileSync of a template new URL .ts", 'const text = readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8");'],
+      ["Q02 cpSync of a + joined .ts path", 'cpSync(src + "/json-ld.ts", dest);'],
+      ["Q03 createRequire loading a package by a joined name", 'const load = createRequire(import.meta.url);\nload("type" + "script");'],
     ])("allows %s", (_shape, code) => {
       expect(typeScriptImports(join(dir, "entry.cjs"), code)).toEqual([]);
     });

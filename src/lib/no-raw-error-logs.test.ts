@@ -93,16 +93,18 @@ function rawErrorLogs(): string[] {
 // catch, a .catch or .then rejection handler (inline, passed by name or called
 // as p["catch"]), a process or window error listener (an event name that is not
 // a literal counts as one), window.onerror and window.onunhandledrejection,
-// process.setUncaughtExceptionCaptureCallback, a class componentDidCatch, an
-// allSettled reason and a provider's error result, whether destructured
-// (declaration, for-of, assignment, rest element, or the parameter of any
-// function but a component) or read as result.error or result["error"]
-// (declared or assigned, cast or not, or in a .then success handler, inline or
-// passed by name). A component, a function with a PascalCase name or a JSX
-// return, gets its error prop from its parent, usually form text as in
-// FieldError({ error }). Only in error.tsx and global-error.tsx, where Next.js
-// passes the caught value, is that prop audited, destructured or read as
-// props.error.
+// process.setUncaughtExceptionCaptureCallback, a class componentDidCatch or
+// getDerivedStateFromError (method or class field), an allSettled reason and a
+// provider's error result, whether destructured (declaration, for-of,
+// assignment, rest element, nested pattern, or the parameter of any function
+// but a component) or read as result.error or result["error"] (declared or
+// assigned, cast or not, or in a .then success handler, inline or passed by
+// name). A component, a function with a PascalCase name or a JSX return, gets
+// its error prop from its parent, usually form text as in FieldError({ error }).
+// A function handed inline to a call (memo and forwardRef aside) or called by
+// name in its file is not a component, whatever its name or return. Only in
+// error.tsx and global-error.tsx, where Next.js passes the caught value, is a
+// component's error prop audited, destructured or read as props.error.
 // Each is checked the same way. A destructured catch or handler parameter
 // always fails, because its pieces (message, cause, config) are the provider
 // text safeError exists to drop.
@@ -112,6 +114,8 @@ const HOOKS = new Set(["useEffect", "useLayoutEffect", "useCallback", "useMemo"]
 // Handler properties and the parameters that receive the caught value:
 // onerror's message and error, onunhandledrejection's event.
 const ERROR_PROPERTIES = new Map([["onerror", [0, 4]], ["onunhandledrejection", [0]]]);
+// A class error boundary's members that receive the caught value first.
+const BOUNDARY_METHODS = new Set(["componentDidCatch", "getDerivedStateFromError"]);
 // The only calls whose result.error is not audited, each named by its module's
 // path from the repository root and its export name. Each is our own server
 // action and returns fixed wording or a zod validation message, never a
@@ -156,6 +160,15 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
         entry.module.replace(EXTENSION, "") === target.replace(EXTENSION, ""))) safeResults.add(element.name.text);
     }
   }
+  // A local declaration that reuses an allowlisted import's name hides which
+  // function a call reaches, so the declaration fails.
+  function shadows(node: ts.Node) {
+    if ((ts.isVariableDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
+      ts.isClassDeclaration(node) || ts.isParameter(node) || ts.isBindingElement(node)) &&
+      node.name && ts.isIdentifier(node.name) && safeResults.has(node.name.text)) hit(node.name);
+    ts.forEachChild(node, shadows);
+  }
+  if (safeResults.size) shadows(source);
 
   // (await send()) as T is the same awaited call as await send().
   function unwrap(node: ts.Expression): ts.Expression {
@@ -326,7 +339,13 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
         if (error && ts.isIdentifier(element.name)) inspectErrorReads(scope, element.name.text);
         continue;
       }
-      if (!exposes(element.propertyName ?? element.name, error)) continue;
+      if (!exposes(element.propertyName ?? element.name, error)) {
+        // A nested pattern ({ data: { error } }) reaches error one level down.
+        // Open: an array pattern ([{ error }]) is not followed, here or as a
+        // declaration; the review named only object nesting, so it waits.
+        if (ts.isObjectBindingPattern(element.name)) inspectPattern(element.name, scope, error);
+        continue;
+      }
       if (ts.isIdentifier(element.name)) inspect(scope, element.name.text);
       else hit(element);
     }
@@ -339,10 +358,18 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   }
 
   // A component: a PascalCase name (its own, or the const it is assigned to)
-  // or a return value with JSX in it.
+  // or a return value with JSX in it. Not one, whatever its name or return:
+  // a function handed inline to a call (replies.map(({ error }) => <li />)),
+  // memo and forwardRef aside, or one the file calls by name (LogReply(reply)).
   function componentShaped(fn: ts.FunctionLikeDeclaration): boolean {
     const name = (ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name ? fn.name.text
       : ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : "";
+    const wrapper = ts.isCallExpression(fn.parent) && ts.isIdentifier(fn.parent.expression) &&
+      ["memo", "forwardRef"].includes(fn.parent.expression.text);
+    if (ts.isCallExpression(fn.parent) && !wrapper) return false;
+    const calledByName = (node: ts.Node): boolean => (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+      node.expression.text === name) || !!ts.forEachChild(node, calledByName);
+    if (name && calledByName(source)) return false;
     if (COMPONENT_NAME.test(name)) return true;
     const jsx = (node: ts.Node): boolean =>
       ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node) || !!ts.forEachChild(node, jsx);
@@ -365,6 +392,7 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       // by name is audited where this file declares it, as a rejection handler
       // is. One the file does not declare (an import, a state setter) is not:
       // most success handlers never see a provider result.
+      // Open: an imported handler or a member one (handlers.onSent) is not resolved, so it passes.
       const callee = node.expression;
       const success = memberName(callee) === "then" ? node.arguments[0] : undefined;
       const handlers = !success ? [] : ts.isArrowFunction(success) || ts.isFunctionExpression(success) ? [success]
@@ -377,8 +405,13 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       const indices = ERROR_PROPERTIES.get(memberName(node.left) ?? "");
       if (indices) inspectAnyHandler(unwrap(node.right), indices);
     }
-    // A class error boundary receives the caught value in componentDidCatch.
-    if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "componentDidCatch") inspectHandler(node);
+    // A class error boundary receives the caught value in componentDidCatch and
+    // getDerivedStateFromError, written as a method or as a class field.
+    if ((ts.isMethodDeclaration(node) || ts.isPropertyDeclaration(node)) && ts.isIdentifier(node.name) &&
+      BOUNDARY_METHODS.has(node.name.text)) {
+      if (ts.isMethodDeclaration(node)) inspectHandler(node);
+      else inspectAnyHandler(node.initializer && unwrap(node.initializer));
+    }
     // A provider result's { error } (Resend, for one) is a caught value too,
     // in a declaration or for-of, a .then success parameter, or an assignment.
     if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name)) {
@@ -574,8 +607,28 @@ describe("error logging", () => {
     expect(unsafeCaughtReferences(code, "src/components/send-status.tsx").length).toBeGreaterThan(0);
   });
 
-  // Benign shapes from the same review. N05 and the arrow are components, by
-  // name or by their JSX return, so their error prop is their own text.
+  // Raw shapes from the fifth version's review. It let the first five through
+  // as components: each has a PascalCase name or returns JSX but is handed
+  // inline to .map or called by name with a provider result. The rest are gaps
+  // every version had.
+  it.each([
+    ["G01 a PascalCase helper called by name", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["G02 a PascalCase const arrow helper called by name", 'const ReportSend = ({ error }) => { if (error) logger.error("send failed", error); };\nexport async function notify(m) { ReportSend(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["G04 a render helper given a provider result, logging and returning JSX", 'function renderReply({ error }) {\n  if (error) { logger.error("send failed", error); return <p>Failed</p>; }\n  return null;\n}\nexport default async function Page() { return renderReply(await resend.emails.send(message)); }', "src/app/book/[slug]/page.tsx"],
+    ["G22 an inline .map callback rendering provider error text", 'export default async function Page() {\n  const replies = await Promise.all(messages.map((m) => resend.emails.send(m)));\n  return <ul>{replies.map(({ error }) => <li>{error?.message}</li>)}</ul>;\n}', "src/app/book/[slug]/page.tsx"],
+    ["G23 an inline .map callback logging and returning JSX", 'export default async function Page() {\n  const replies = await Promise.all(messages.map((m) => resend.emails.send(m)));\n  return <ul>{replies.map(({ error }) => { if (error) logger.error("send failed", error); return <li>sent</li>; })}</ul>;\n}', "src/app/book/[slug]/page.tsx"],
+    ["G07 componentDidCatch as a class field", 'class Boundary extends Component {\n  componentDidCatch = (fault, info) => { logger.error(fault, info.componentStack); };\n}', "src/components/send-status.tsx"],
+    ["G09 getDerivedStateFromError copying fault.message to state", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { detail: fault.message }; } }', "src/components/send-status.tsx"],
+    ["G11 nested destructuring { data: { error } }", 'const { data: { error } } = await client.request(query);\nif (error) logger.error("request failed", error);', "src/components/send-status.tsx"],
+    ["G12 nested destructuring in a forEach parameter", 'const outcomes = await Promise.all(messages.map((m) => resend.emails.send(m)));\noutcomes.forEach(({ data: { error } }) => logger.error("send failed", error));', "src/components/send-status.tsx"],
+    ["G19 the allowlisted name shadowed by a local provider wrapper", 'import { createPendingBooking } from "./actions";\nasync function notify(m) {\n  const createPendingBooking = (x) => resend.emails.send(x);\n  const result = await createPendingBooking(m);\n  logger.error("send failed", result.error);\n}', "src/app/book/[slug]/booking-flow.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Benign shapes from the same review. N05, the arrow and the memo-wrapped
+  // arrow are components, by name or by their JSX return, so their error prop
+  // is their own text.
   it.each([
     ["N01 an error message compared to a literal", 'const result = await resend.emails.send(message);\nif (result.error?.message === "rate_limited") return retryLater();', "src/components/send-status.tsx"],
     ["N02 data only from a provider result", 'const { data } = await resend.emails.send(message);\nlogger.info("sent", data?.id);', "src/components/send-status.tsx"],
@@ -587,6 +640,8 @@ describe("error logging", () => {
     ["N08 onerror cleared with null", 'image.onerror = null;\nwindow.onunhandledrejection = null;', "src/components/send-status.tsx"],
     ["N09 a local validation string named error", 'const error = validate(form);\nif (error) setFieldError(error);', "src/components/send-status.tsx"],
     ["a lower-case arrow component returning JSX", 'const fieldHint = ({ error }) => <small>{error}</small>;', "src/components/field-hint.tsx"],
+    ["a memo-wrapped component with a form-text error prop", 'export const FieldNote = memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    ["a getDerivedStateFromError that keeps only a flag", 'class Boundary extends Component { static getDerivedStateFromError() { return { failed: true }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
   });
