@@ -6,13 +6,15 @@
 // included. This test fails if any .mjs or .cjs under scripts/ loads a
 // TypeScript file. Inline what such a script needs instead.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
 const PLAIN_NODE = /\.(mjs|cjs)$/;
+const PLAIN_JS = /\.(mjs|cjs|js)$/;
 const TYPESCRIPT = /\.(ts|tsx|mts|cts)$/;
 
 function plainNodeScripts(dir: string, out: string[] = []): string[] {
@@ -25,32 +27,48 @@ function plainNodeScripts(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** True when a specifier loads TypeScript, written with or without its extension. */
-function loadsTypeScript(file: string, specifier: string): boolean {
-  if (TYPESCRIPT.test(specifier)) return true;
-  if (!specifier.startsWith(".")) return false;
-  const target = resolve(dirname(file), specifier);
-  if (existsSync(target) && statSync(target).isFile()) return false;
+/** The path part of a specifier, without a ?query or #fragment. A leading # is a subpath import. */
+function bare(specifier: string): string {
+  return specifier.slice(0, 1) + specifier.slice(1).split(/[?#]/)[0];
+}
+
+/**
+ * True when a specifier loads TypeScript, written with or without its
+ * extension, directly or through a relative .mjs, .cjs or .js file.
+ */
+function loadsTypeScript(file: string, specifier: string, seen: Set<string>): boolean {
+  const path = bare(specifier);
+  if (TYPESCRIPT.test(path)) return true;
+  if (!path.startsWith(".")) return false;
+  const target = resolve(dirname(file), path);
+  if (existsSync(target) && statSync(target).isFile()) {
+    if (!PLAIN_JS.test(target) || seen.has(target)) return false;
+    seen.add(target);
+    return typeScriptImports(target, readFileSync(target, "utf8"), seen).length > 0;
+  }
   return [".ts", ".tsx", ".mts", ".cts", "/index.ts", "/index.tsx"].some((ending) => existsSync(target + ending));
 }
 
 /**
- * Lines that load TypeScript: static imports, re-exports, import() and
- * require(). A specifier that is not a string literal cannot be checked, so it
- * counts as a hit too.
+ * Lines that load TypeScript: static imports, re-exports, import(), require()
+ * and any other call whose first argument is a TypeScript literal. A specifier
+ * that is not a string literal cannot be checked, so it counts as a hit too.
  */
-function typeScriptImports(file: string, text: string): number[] {
+function typeScriptImports(file: string, text: string, seen = new Set([resolve(file)])): number[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const hits: number[] = [];
   function visit(node: ts.Node) {
     let target: ts.Expression | undefined;
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
       target = node.moduleSpecifier;
-    } else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-      (ts.isIdentifier(node.expression) && node.expression.text === "require"))) {
-      target = node.arguments[0];
+    } else if (ts.isCallExpression(node)) {
+      const first = node.arguments[0];
+      if (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require")) target = first;
+      // createRequire's require, module.register or a wrapper loads a literal .ts path too.
+      else if (first && ts.isStringLiteralLike(first) && TYPESCRIPT.test(bare(first.text))) target = first;
     }
-    if (target && (!ts.isStringLiteralLike(target) || loadsTypeScript(file, target.text))) {
+    if (target && (!ts.isStringLiteralLike(target) || loadsTypeScript(file, target.text, seen))) {
       hits.push(source.getLineAndCharacterOfPosition(target.getStart(source)).line + 1);
     }
     ts.forEachChild(node, visit);
@@ -77,8 +95,29 @@ describe("scripts that run under plain Node", () => {
     'const { safeError } = await import("../src/lib/redact.ts");',
     'const { safeError } = require("../src/lib/redact.cts");',
     'const loaded = await import(modulePath);',
+    'const { safeError } = load("../src/lib/redact.ts");',
+    'import { safeError } from "../src/lib/redact.ts?raw";',
+    'import { safeError } from "../src/lib/redact.ts#hash";',
+    'import { safeError } from "../src/lib/redact?raw";',
   ])("detects %s", (code) => {
     expect(typeScriptImports(fixture, code)).toEqual([1]);
+  });
+
+  it("follows relative .mjs, .cjs and .js imports to a TypeScript file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "script-imports-"));
+    const scan = (name: string) => typeScriptImports(join(dir, name), readFileSync(join(dir, name), "utf8"));
+    try {
+      writeFileSync(join(dir, "leaf.ts"), "export const leaf = 1;\n");
+      writeFileSync(join(dir, "middle.js"), 'export * from "./leaf.ts";\n');
+      writeFileSync(join(dir, "entry.mjs"), 'import "./middle.js";\n');
+      writeFileSync(join(dir, "hop.cjs"), 'require("./leaf.ts");\n');
+      writeFileSync(join(dir, "other.mjs"), 'import "node:fs";\nimport "./hop.cjs";\n');
+      writeFileSync(join(dir, "plain.js"), 'import "./clean.mjs";\n');
+      writeFileSync(join(dir, "clean.mjs"), 'import "./plain.js";\n');
+      expect([scan("entry.mjs"), scan("other.mjs"), scan("clean.mjs")]).toEqual([[1], [2], []]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("allows Node built-ins, packages and plain JavaScript files", () => {
