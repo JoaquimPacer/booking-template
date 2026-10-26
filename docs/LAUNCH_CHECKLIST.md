@@ -20,7 +20,7 @@ Work top to bottom. Most steps are one-time per client.
   - Jane clinic-wide link: **Jane > Settings > Branding > "Book Online Buttons"** > copy the plain URL.
   - Paste into **Sanity > Site Settings > Booking > External booking link**. Publish. Every Book button now routes there.
   - Per-service deep links: in Jane, click each treatment on the live booking page and copy the browser URL (the `#/.../treatment/ID` link). Paste into each service's "Booking link for this service" field in Studio.
-  - VERIFY the deep links before trusting them: `npx tsx scripts/check-jane-links.ts` drives a real browser to each link and reports which treatment it actually lands on (Jane's hash links are easy to mislabel). Bulk-set with `npx tsx scripts/set-booking-links.ts --apply`.
+  - VERIFY the deep links before trusting them: Jane's hash links are easy to mislabel. The link checker (`check-jane-links.ts`, drives a real browser to each link and reports which treatment it lands on) and the bulk setter (`set-booking-links.ts`) were client one-offs and now live only in the `theresa-attea-lmt` fork's `scripts/`; copy and adapt them for a new Jane client.
   - Same service at multiple lengths (e.g. 60/90 min): combine into one card + length picker via the service **Options** field in Studio, or `npx tsx scripts/combine-service-options.ts --apply`.
 - **Built-in scheduler (non-medical clients):** leave External booking link blank, then:
   - `npx tsx scripts/seed-studio-db.ts --apply` (Studio + hours + services into Neon)
