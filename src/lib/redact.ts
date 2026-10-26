@@ -6,9 +6,8 @@
  * quotes the credential it rejected. Only safeError's fixed messages are
  * approved for error logs; pattern redaction alone cannot guarantee safety.
  *
- * The shapes mirror the ones the operator's own scanner uses
- * (C:/Users/f927g/Repos/claude-config/tools/guards/credential-patterns.mjs),
- * trimmed to what can plausibly reach this application's logs. Anything
+ * The shapes mirror common credential-scanner patterns, trimmed to what can
+ * plausibly reach this application's logs. Anything
  * matched is replaced whole; nothing is shortened to a prefix, because a
  * prefix of a key is still a piece of a key.
  */
@@ -55,6 +54,7 @@ const SECRET_SHAPES: readonly RegExp[] = [
 
 export const REDACTED = "[redacted]";
 
+// Retained for the tests and for callers that need a redacted string; logs use safeError.
 /** Best-effort text redaction; use safeError for untrusted error messages. */
 export function redactSecrets(text: string): string {
   let safe = text;
