@@ -6,7 +6,7 @@
 // included. This test fails if any .mjs or .cjs under scripts/ loads a
 // TypeScript file. Inline what such a script needs instead.
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
@@ -34,25 +34,50 @@ function bare(specifier: string): string {
 
 /**
  * True when a specifier loads TypeScript, written with or without its
- * extension, directly or through a relative .mjs, .cjs or .js file.
+ * extension, directly or through a relative .mjs, .cjs or .js file. A name
+ * without an extension is also tried the way require looks it up: with .js
+ * (or .mjs, .cjs) added, then as a folder's index file.
  */
 function loadsTypeScript(file: string, specifier: string, seen: Set<string>): boolean {
   const path = bare(specifier);
   if (TYPESCRIPT.test(path)) return true;
   if (!path.startsWith(".")) return false;
   const target = resolve(dirname(file), path);
-  if (existsSync(target) && statSync(target).isFile()) {
-    if (!PLAIN_JS.test(target) || seen.has(target)) return false;
-    seen.add(target);
-    return typeScriptImports(target, readFileSync(target, "utf8"), seen).length > 0;
+  if (existsSync(target) && statSync(target).isFile()) return followsToTypeScript(target, seen);
+  if ([".ts", ".tsx", ".mts", ".cts", "/index.ts", "/index.tsx"].some((ending) => existsSync(target + ending))) return true;
+  return [".js", ".mjs", ".cjs", "/index.js", "/index.mjs", "/index.cjs"].map((ending) => resolve(target + ending))
+    .some((candidate) => existsSync(candidate) && statSync(candidate).isFile() && followsToTypeScript(candidate, seen));
+}
+
+/** True when a plain JavaScript file, not yet visited, loads TypeScript. */
+function followsToTypeScript(target: string, seen: Set<string>): boolean {
+  if (!PLAIN_JS.test(target) || seen.has(target)) return false;
+  seen.add(target);
+  return typeScriptImports(target, readFileSync(target, "utf8"), seen).length > 0;
+}
+
+/**
+ * The literal pieces of a name joined with + or a template: "./leaf" + ".ts".
+ * A joined name with no piece ending in a TypeScript extension (dir + name)
+ * cannot be resolved here, and flagging every joined path would flag ordinary
+ * file reads, so it passes. import() and require() fail on any such name.
+ */
+function literalPieces(node: ts.Expression): string[] {
+  if (ts.isStringLiteralLike(node)) return [node.text];
+  if (ts.isParenthesizedExpression(node)) return literalPieces(node.expression);
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    return [...literalPieces(node.left), ...literalPieces(node.right)];
   }
-  return [".ts", ".tsx", ".mts", ".cts", "/index.ts", "/index.tsx"].some((ending) => existsSync(target + ending));
+  if (ts.isTemplateExpression(node)) return [node.head.text, ...node.templateSpans.map((span) => span.literal.text)];
+  return [];
 }
 
 /**
  * Lines that load TypeScript: static imports, re-exports, import(), require()
- * and any other call whose first argument is a TypeScript literal. A specifier
- * that is not a string literal cannot be checked, so it counts as a hit too.
+ * and any other call or new expression whose first argument is a TypeScript
+ * literal or a joined name with a TypeScript piece. A console call only prints
+ * its text. A specifier for import() or require() that is not a string literal
+ * cannot be checked, so it counts as a hit too.
  */
 function typeScriptImports(file: string, text: string, seen = new Set([resolve(file)])): number[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
@@ -61,12 +86,15 @@ function typeScriptImports(file: string, text: string, seen = new Set([resolve(f
     let target: ts.Expression | undefined;
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
       target = node.moduleSpecifier;
-    } else if (ts.isCallExpression(node)) {
-      const first = node.arguments[0];
+    } else if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const first = node.arguments?.[0];
+      const consoleCall = ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression) &&
+        node.expression.expression.text === "console";
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
         (ts.isIdentifier(node.expression) && node.expression.text === "require")) target = first;
-      // createRequire's require, module.register or a wrapper loads a literal .ts path too.
-      else if (first && ts.isStringLiteralLike(first) && TYPESCRIPT.test(bare(first.text))) target = first;
+      // createRequire's require, module.register, new URL (for new Worker) or a
+      // wrapper loads a literal .ts path too.
+      else if (first && !consoleCall && literalPieces(first).some((piece) => TYPESCRIPT.test(bare(piece)))) target = first;
     }
     if (target && (!ts.isStringLiteralLike(target) || loadsTypeScript(file, target.text, seen))) {
       hits.push(source.getLineAndCharacterOfPosition(target.getStart(source)).line + 1);
@@ -99,6 +127,9 @@ describe("scripts that run under plain Node", () => {
     'import { safeError } from "../src/lib/redact.ts?raw";',
     'import { safeError } from "../src/lib/redact.ts#hash";',
     'import { safeError } from "../src/lib/redact?raw";',
+    'new Worker(new URL("../src/lib/redact.ts", import.meta.url));',
+    'const { safeError } = load("../src/lib/" + "redact.ts");',
+    'const { safeError } = load(`../src/lib/${name}.ts`);',
   ])("detects %s", (code) => {
     expect(typeScriptImports(fixture, code)).toEqual([1]);
   });
@@ -118,6 +149,35 @@ describe("scripts that run under plain Node", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("follows an extensionless require and a folder's index.js to a TypeScript file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "script-imports-"));
+    const scan = (name: string) => typeScriptImports(join(dir, name), readFileSync(join(dir, name), "utf8"));
+    try {
+      mkdirSync(join(dir, "pkg"));
+      mkdirSync(join(dir, "cleanpkg"));
+      writeFileSync(join(dir, "leaf.ts"), "export const leaf = 1;\n");
+      writeFileSync(join(dir, "middle.js"), 'require("./leaf.ts");\n');
+      writeFileSync(join(dir, "pkg", "index.js"), 'require("../leaf.ts");\n');
+      writeFileSync(join(dir, "plain.js"), 'require("node:fs");\n');
+      writeFileSync(join(dir, "cleanpkg", "index.js"), 'require("node:fs");\n');
+      writeFileSync(join(dir, "noext.cjs"), 'require("./middle");\n');
+      writeFileSync(join(dir, "folder.cjs"), 'require("./pkg");\n');
+      writeFileSync(join(dir, "clean.cjs"), 'require("./plain");\nrequire("./cleanpkg");\n');
+      expect([scan("noext.cjs"), scan("folder.cjs"), scan("clean.cjs")]).toEqual([[1], [1], []]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // A message that names a .ts file loads nothing, and a joined name with no
+  // TypeScript piece cannot be resolved (see literalPieces).
+  it("allows a console message naming a .ts file and an unresolvable joined name", () => {
+    expect(typeScriptImports(fixture, [
+      'console.warn("skipping src/lib/json-ld.ts");',
+      'const data = readFileSync(dir + name, "utf8");',
+    ].join("\n"))).toEqual([]);
   });
 
   it("allows Node built-ins, packages and plain JavaScript files", () => {

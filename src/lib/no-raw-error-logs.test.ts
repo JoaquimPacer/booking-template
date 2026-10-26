@@ -92,29 +92,72 @@ function rawErrorLogs(): string[] {
 // A caught value arrives through more doors than catch (x): a destructured
 // catch, a .catch or .then rejection handler (inline, passed by name or called
 // as p["catch"]), a process or window error listener (an event name that is not
-// a literal counts as one), an allSettled reason and a provider's error result,
-// whether destructured (declaration, for-of, parameter, assignment) or read as
-// result.error. An error boundary's { error } prop is a destructured parameter.
+// a literal counts as one), window.onerror and window.onunhandledrejection,
+// process.setUncaughtExceptionCaptureCallback, a class componentDidCatch, an
+// allSettled reason and a provider's error result, whether destructured
+// (declaration, for-of, parameter, assignment, rest element) or read as
+// result.error or result["error"] (declared or assigned, cast or not, or in a
+// .then success handler). In error.tsx and global-error.tsx the error prop,
+// destructured or read as props.error, is the caught value too.
 // Each is checked the same way. A destructured catch or handler parameter
 // always fails, because its pieces (message, cause, config) are the provider
 // text safeError exists to drop.
 const ERROR_EVENTS = new Set(["error", "uncaughtException", "uncaughtExceptionMonitor", "unhandledRejection", "unhandledrejection"]);
 const LISTENERS = new Set(["on", "once", "addListener", "prependListener", "prependOnceListener", "addEventListener"]);
 const HOOKS = new Set(["useEffect", "useLayoutEffect", "useCallback", "useMemo"]);
+// Handler properties and the parameters that receive the caught value:
+// onerror's message and error, onunhandledrejection's event.
+const ERROR_PROPERTIES = new Map([["onerror", [0, 4]], ["onunhandledrejection", [0]]]);
+// The only calls whose result.error is not audited. Each is our own server
+// action and returns fixed wording or a zod validation message, never a
+// provider result. A helper that returns a provider result whole
+// (return resend.emails.send(message)) must never be added here.
+const SAFE_RESULTS = new Set(["createPendingBooking"]);
+// Next.js hands the caught value to these files' components as the error prop.
+// Anywhere else an error prop is usually form text, as in FieldError({ error }).
+const BOUNDARY_FILE = /(^|[\\/])(global-)?error\.[jt]sx?$/;
 
-function unsafeCaughtReferences(text: string): number[] {
+function unsafeCaughtReferences(text: string, file = ""): number[] {
   const source = ts.createSourceFile("audit.tsx", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const hits: number[] = [];
   const settles = text.includes("allSettled");
+  const boundary = BOUNDARY_FILE.test(file);
   const hit = (node: ts.Node) => hits.push(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
-  // Functions imported by name from our own modules (relative or @/) return
-  // our own wording, such as a server action's { ok: false, error: "..." }.
-  const ownImports = new Set<string>();
+  // Allowlisted functions imported by name from our own modules (relative or @/).
+  const safeResults = new Set<string>();
   for (const statement of source.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
       !/^(\.|@\/)/.test(statement.moduleSpecifier.text)) continue;
     const bindings = statement.importClause?.namedBindings;
-    if (bindings && ts.isNamedImports(bindings)) for (const element of bindings.elements) ownImports.add(element.name.text);
+    if (bindings && ts.isNamedImports(bindings)) for (const element of bindings.elements) {
+      if (SAFE_RESULTS.has((element.propertyName ?? element.name).text)) safeResults.add(element.name.text);
+    }
+  }
+
+  // (await send()) as T is the same awaited call as await send().
+  function unwrap(node: ts.Expression): ts.Expression {
+    while (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) ||
+      ts.isNonNullExpression(node) || ts.isTypeAssertionExpression(node)) node = node.expression;
+    return node;
+  }
+
+  // A call to an allowlisted function, awaited or not.
+  function allowlisted(node: ts.Expression): boolean {
+    let value = unwrap(node);
+    if (ts.isAwaitExpression(value)) value = unwrap(value.expression);
+    return ts.isCallExpression(value) && ts.isIdentifier(value.expression) && safeResults.has(value.expression.text);
+  }
+
+  // An awaited value that may carry a provider's raw error.
+  function providerResult(node: ts.Expression | undefined): boolean {
+    return !!node && ts.isAwaitExpression(unwrap(node)) && !allowlisted(node);
+  }
+
+  // The name in x.name or x["name"].
+  function memberName(node: ts.Node): string | undefined {
+    if (ts.isPropertyAccessExpression(node)) return node.name.text;
+    if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) return node.argumentExpression.text;
+    return undefined;
   }
 
   // A caught value may be wrapped by safeError, type-checked, compared to a
@@ -170,17 +213,31 @@ function unsafeCaughtReferences(text: string): number[] {
     visit(scope);
   }
 
-  // The first parameter of a rejection handler receives the caught value.
-  function inspectHandler(handler: ts.FunctionLikeDeclaration) {
-    const binding = handler.parameters[0]?.name;
-    if (!binding || !handler.body) return;
-    if (ts.isIdentifier(binding)) inspect(handler.body, binding.text);
-    else hit(binding);
+  // error read off a provider result held in name: name.error or name["error"].
+  function inspectErrorReads(scope: ts.Node, name: string) {
+    function read(node: ts.Node) {
+      if ((ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && memberName(node) === "error" &&
+        ts.isIdentifier(node.expression) && node.expression.text === name && forwarded(node)) hit(node);
+      ts.forEachChild(node, read);
+    }
+    read(scope);
+  }
+
+  // The first parameter of a rejection handler receives the caught value
+  // (onerror's are listed in ERROR_PROPERTIES).
+  function inspectHandler(handler: ts.FunctionLikeDeclaration, indices = [0]) {
+    if (!handler.body) return;
+    for (const index of indices) {
+      const binding = handler.parameters[index]?.name;
+      if (!binding) continue;
+      if (ts.isIdentifier(binding)) inspect(handler.body, binding.text);
+      else hit(binding);
+    }
   }
 
   // A handler passed by name is audited where it is declared. One defined in
   // another module cannot be audited here, so it fails.
-  function inspectNamedHandler(reference: ts.Identifier) {
+  function inspectNamedHandler(reference: ts.Identifier, indices = [0]) {
     const declarations: ts.FunctionLikeDeclaration[] = [];
     function collect(node: ts.Node) {
       if (ts.isFunctionDeclaration(node) && node.name?.text === reference.text) declarations.push(node);
@@ -192,17 +249,24 @@ function unsafeCaughtReferences(text: string): number[] {
     }
     collect(source);
     if (declarations.length === 0) hit(reference);
-    for (const declaration of declarations) inspectHandler(declaration);
+    for (const declaration of declarations) inspectHandler(declaration, indices);
+  }
+
+  // Audit a handler however it is given. null or undefined installs none.
+  function inspectAnyHandler(handler: ts.Expression | undefined, indices = [0]) {
+    if (!handler || handler.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(handler) && handler.text === "undefined")) return;
+    if (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) inspectHandler(handler, indices);
+    else if (ts.isIdentifier(handler)) inspectNamedHandler(handler, indices);
+    else hit(handler);
   }
 
   function rejectionHandler(call: ts.CallExpression): ts.Expression | undefined {
-    const callee = call.expression;
-    const method = ts.isPropertyAccessExpression(callee) ? callee.name.text
-      : ts.isElementAccessExpression(callee) && ts.isStringLiteralLike(callee.argumentExpression)
-        ? callee.argumentExpression.text : undefined;
+    const method = memberName(call.expression);
     if (!method) return undefined;
     if (method === "catch") return call.arguments[0];
     if (method === "then") return call.arguments[1];
+    // Node's last-resort hook receives the uncaught error.
+    if (method === "setUncaughtExceptionCaptureCallback") return call.arguments[0];
     // An event name that is not a literal could be an error event, so it is audited as one.
     const event = call.arguments[0];
     if (LISTENERS.has(method) && event && (!ts.isStringLiteralLike(event) || ERROR_EVENTS.has(event.text))) {
@@ -213,9 +277,9 @@ function unsafeCaughtReferences(text: string): number[] {
 
   // A pattern that pulls error (or, beside allSettled, reason) out of a value
   // exposes the caught value under a local name.
-  function exposes(name: ts.Node | undefined): name is ts.Identifier | ts.StringLiteral {
+  function exposes(name: ts.Node | undefined, error = true): name is ts.Identifier | ts.StringLiteral {
     return !!name && (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
-      (name.text === "error" || (settles && name.text === "reason"));
+      ((error && name.text === "error") || (settles && name.text === "reason"));
   }
 
   function enclosingBlock(node: ts.Node): ts.Node {
@@ -224,12 +288,24 @@ function unsafeCaughtReferences(text: string): number[] {
     return scope;
   }
 
-  function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node) {
+  // With error false, only an allSettled reason counts.
+  function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node, error = true) {
     for (const element of pattern.elements) {
-      if (!exposes(element.propertyName ?? element.name)) continue;
+      // A rest element keeps error along with every other unnamed property.
+      if (element.dotDotDotToken) {
+        if (error && ts.isIdentifier(element.name)) inspectErrorReads(scope, element.name.text);
+        continue;
+      }
+      if (!exposes(element.propertyName ?? element.name, error)) continue;
       if (ts.isIdentifier(element.name)) inspect(scope, element.name.text);
       else hit(element);
     }
+  }
+
+  // A provider result bound to a name or a pattern.
+  function inspectResult(binding: ts.BindingName | undefined, scope: ts.Node) {
+    if (binding && ts.isIdentifier(binding)) inspectErrorReads(scope, binding.text);
+    else if (binding && ts.isObjectBindingPattern(binding)) inspectPattern(binding, scope);
   }
 
   function find(node: ts.Node) {
@@ -239,18 +315,31 @@ function unsafeCaughtReferences(text: string): number[] {
       else hit(binding);
     }
     if (ts.isCallExpression(node)) {
-      const handler = rejectionHandler(node);
-      if (handler && (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler))) inspectHandler(handler);
-      else if (handler && ts.isIdentifier(handler)) inspectNamedHandler(handler);
-      else if (handler) hit(handler);
+      inspectAnyHandler(rejectionHandler(node));
+      // A .then success handler receives the provider result itself.
+      const callee = node.expression;
+      const success = memberName(callee) === "then" ? node.arguments[0] : undefined;
+      if (success && (ts.isArrowFunction(success) || ts.isFunctionExpression(success)) &&
+        (ts.isPropertyAccessExpression(callee) || ts.isElementAccessExpression(callee)) && !allowlisted(callee.expression)) {
+        inspectResult(success.parameters[0]?.name, success.body);
+      }
     }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      const indices = ERROR_PROPERTIES.get(memberName(node.left) ?? "");
+      if (indices) inspectAnyHandler(unwrap(node.right), indices);
+    }
+    // A class error boundary receives the caught value in componentDidCatch.
+    if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "componentDidCatch") inspectHandler(node);
     // A provider result's { error } (Resend, for one) is a caught value too,
-    // in a declaration or for-of, a parameter, or an assignment.
+    // in a declaration or for-of, a .then success parameter, or an assignment.
     if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name)) {
       inspectPattern(node.name, enclosingBlock(node));
     }
-    if (ts.isParameter(node) && ts.isObjectBindingPattern(node.name) && "body" in node.parent && node.parent.body) {
-      inspectPattern(node.name, node.parent.body);
+    // A parameter pattern counts for an allSettled reason anywhere, and for
+    // error only in an error boundary file, where props.error counts as well.
+    if (ts.isParameter(node) && "body" in node.parent && node.parent.body) {
+      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body, boundary);
+      else if (boundary && ts.isIdentifier(node.name)) inspectErrorReads(node.parent.body, node.name.text);
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
       ts.isObjectLiteralExpression(node.left)) {
@@ -263,17 +352,14 @@ function unsafeCaughtReferences(text: string): number[] {
         }
       }
     }
-    // So is error read straight off an awaited provider result: result.error.
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer &&
-      ts.isAwaitExpression(node.initializer) && !(ts.isCallExpression(node.initializer.expression) &&
-        ts.isIdentifier(node.initializer.expression.expression) && ownImports.has(node.initializer.expression.expression.text))) {
-      const result = node.name.text;
-      const read = (child: ts.Node) => {
-        if (ts.isPropertyAccessExpression(child) && child.name.text === "error" && ts.isIdentifier(child.expression) &&
-          child.expression.text === result && forwarded(child)) hit(child);
-        ts.forEachChild(child, read);
-      };
-      read(enclosingBlock(node));
+    // So is error read straight off an awaited provider result, declared or
+    // assigned: result.error.
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && providerResult(node.initializer)) {
+      inspectErrorReads(enclosingBlock(node), node.name.text);
+    }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(node.left) && providerResult(node.right)) {
+      inspectErrorReads(enclosingBlock(node), node.left.text);
     }
     // A rejected allSettled result carries the raw reason.
     if (settles && ts.isPropertyAccessExpression(node) && node.name.text === "reason" && forwarded(node)) hit(node);
@@ -290,7 +376,7 @@ describe("error logging", () => {
 
   it("routes caught values through safeError before forwarding them", () => {
     const hits = ROOTS.flatMap((root) => files(join(ROOT, root))).flatMap((file) =>
-      unsafeCaughtReferences(readFileSync(file, "utf8")).map((line) => `${relative(ROOT, file)}:${line}`));
+      unsafeCaughtReferences(readFileSync(file, "utf8"), file).map((line) => `${relative(ROOT, file)}:${line}`));
     expect(hits).toEqual([]);
   });
 
@@ -329,7 +415,47 @@ describe("error logging", () => {
     ["a bracketed catch call", 'task["catch"]((caught) => logger.warn(caught.message));'],
     ["an error-boundary { error } prop", 'export default function ErrorPage({ error }) { useEffect(() => { logger.error(error.message); }, [error]); return null; }'],
   ])("detects %s", (_shape, code) => {
-    expect(unsafeCaughtReferences(code).length).toBeGreaterThan(0);
+    // Audited as an error boundary file, the only place an error prop is a caught value.
+    expect(unsafeCaughtReferences(code, "src/app/error.tsx").length).toBeGreaterThan(0);
+  });
+
+  // Ten close variants the third version let through. The last two are error
+  // boundaries; props.error counts only in error.tsx or global-error.tsx.
+  it.each([
+    ["an as-cast awaited result", 'const result = (await resend.emails.send(message)) as SendResult; if (result.error) logger.error("send failed", result.error);', ""],
+    ["a .then success handler", 'resend.emails.send(message).then((result) => { if (result.error) logger.error("send failed", result.error); });', ""],
+    ["a bracketed result[\"error\"]", 'const result = await resend.emails.send(message); logger.error("send failed", result["error"]);', ""],
+    ["an assigned, not declared, result", 'let result; result = await resend.emails.send(message); logger.error("send failed", result.error);', ""],
+    ["a rest element", 'const { data, ...rest } = await resend.emails.send(message); logger.error("send failed", rest.error);', ""],
+    ["window.onunhandledrejection", 'window.onunhandledrejection = (event) => logger.error(event.reason);', ""],
+    ["window.onerror", 'window.onerror = (message, source, line, column, fault) => logger.error(fault);', ""],
+    ["setUncaughtExceptionCaptureCallback", 'process.setUncaughtExceptionCaptureCallback((fault) => logger.error(fault));', ""],
+    ["a class componentDidCatch", 'class Boundary extends Component { componentDidCatch(fault, info) { logger.error(fault, info.componentStack); } }', ""],
+    ["an error boundary's props.error", 'export default function ErrorPage(props) { useEffect(() => { logger.error(props.error); }, [props.error]); return null; }', "src/app/error.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  it("allows the ten variants when every value goes through safeError", () => {
+    expect(unsafeCaughtReferences([
+      'const result = (await resend.emails.send(message)) as SendResult; if (result.error) logger.error("send failed", safeError(result.error));',
+      'resend.emails.send(message).then((reply) => { if (reply.error) logger.error(safeError(reply.error)); });',
+      'const third = await resend.emails.send(message); logger.error("send failed", safeError(third["error"]));',
+      'let fourth; fourth = await resend.emails.send(message); logger.error(safeError(fourth.error));',
+      'const { data, ...rest } = await resend.emails.send(message); logger.error(safeError(rest.error));',
+      'window.onunhandledrejection = (event) => logger.error(safeError(event));',
+      'window.onerror = (message, source, line, column, fault) => logger.error(safeError(fault), source, line);',
+      'process.setUncaughtExceptionCaptureCallback((fault) => logger.error(safeError(fault))); process.setUncaughtExceptionCaptureCallback(null);',
+      'class Boundary extends Component { componentDidCatch(fault, info) { logger.error(safeError(fault), info.componentStack); } }',
+      'export default function ErrorPage(props) { useEffect(() => { logger.error(safeError(props.error)); }, [props.error]); return null; }',
+    ].join("\n"), "src/app/error.tsx")).toEqual([]);
+  });
+
+  // A form field's error prop is the form's own text, not a caught value.
+  it("audits an error prop only in error.tsx and global-error.tsx", () => {
+    const field = 'export function FieldError({ error }) { return error ? <p role="alert">{error}</p> : null; }';
+    expect(unsafeCaughtReferences(field, "src/components/field-error.tsx")).toEqual([]);
+    expect(unsafeCaughtReferences(field, "src/app/global-error.tsx").length).toBeGreaterThan(0);
   });
 
   it("allows the eight variants when every value goes through safeError", () => {
@@ -345,9 +471,12 @@ describe("error logging", () => {
     ].join("\n"))).toEqual([]);
   });
 
-  it("audits result.error from a package call but not from our own module", () => {
+  // An own helper can return a provider result whole, so only the listed
+  // server action is exempt.
+  it("audits result.error from every call but the allowlisted createPendingBooking", () => {
     expect(unsafeCaughtReferences('import { createPendingBooking } from "./actions"; const result = await createPendingBooking(input); if (!result.ok) setSubmitError(result.error);')).toEqual([]);
     expect(unsafeCaughtReferences('import { send } from "resend"; const result = await send(message); setSubmitError(result.error);')).toEqual([1]);
+    expect(unsafeCaughtReferences('import { sendMail } from "@/lib/mail"; const result = await sendMail(message); console.error("send failed", result.error);')).toEqual([1]);
   });
 
   it("allows the same shapes when every value goes through safeError", () => {
