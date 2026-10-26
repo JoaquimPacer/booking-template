@@ -105,8 +105,12 @@ try {
     console.log(JSON.stringify({ mutation: label, exit: result.status, failed: failed.length, expected }));
   }
 } finally {
-  const untouched = readFileSync(sourcePath).equals(original);
+  // Clean up before reading the source, so a source deleted mid-run cannot
+  // strand the temporary directory. Anything but a file at the source path
+  // (nothing, a directory) counts as changed.
   cleanUp();
+  const untouched = statSync(sourcePath, { throwIfNoEntry: false })?.isFile() === true &&
+    readFileSync(sourcePath).equals(original);
   if (!untouched) throw new Error("src/lib/json-ld.ts changed during the run; the runner left it untouched.");
 }
 
