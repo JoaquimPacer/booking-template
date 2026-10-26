@@ -104,6 +104,49 @@ describe("safeError numeric status regressions", () => {
   });
 });
 
+describe("safeError inspection failures", () => {
+  const cases: [string, (fail: () => never) => unknown][] = [
+    ...["statusCode", "status", "code", "name"].map((property): [string, (fail: () => never) => unknown] => [
+      `${property} getter`,
+      (fail) => Object.defineProperty(property === "status" ? {} : { statusCode: 503 }, property, { get: fail }),
+    ]),
+    ["message getter reached through code", (fail) => {
+      // Providers can derive classification fields from their message getter.
+      const details = Object.defineProperty({ statusCode: 503 }, "message", { get: fail });
+      return Object.defineProperty(details, "code", { get: () => Reflect.get(details, "message") });
+    }],
+    ["inherited name getter", (fail) => Object.create(
+      Object.defineProperty({ statusCode: 503 }, "name", { get: fail }),
+    )],
+    ["Proxy get trap", (fail) => new Proxy({}, { get: fail })],
+    ["Proxy has trap reached through get", (fail) => new Proxy({ statusCode: 503 }, {
+      has: fail,
+      get(target, key, receiver) {
+        return key in receiver ? Reflect.get(target, key, receiver) : undefined;
+      },
+    })],
+  ];
+
+  it.each(cases)("fails closed for a throwing %s", (_label, create) => {
+    let inspections = 0;
+    const input = create(() => {
+      inspections += 1;
+      throw new Error(FAKE_TOKEN);
+    });
+    const diagnostics = ["error", "warn", "log"].map((method) =>
+      vi.spyOn(console, method as "error" | "warn" | "log").mockImplementation(() => {}));
+    let result: ReturnType<typeof safeError> | undefined;
+    try {
+      result = safeError(input);
+    } catch {
+      // Never let the synthetic inspection exception reach test diagnostics.
+    }
+    expect(inspections).toBe(1);
+    expect(result?.message === "Unknown error" && result.status === 0).toBe(true);
+    expect(diagnostics.every((spy) => spy.mock.calls.length === 0)).toBe(true);
+  });
+});
+
 describe("safeError message allowlist regressions", () => {
   const synthetic = ["Verifier", "Synthetic"].join("");
   const messages = [

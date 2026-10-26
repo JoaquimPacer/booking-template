@@ -81,26 +81,31 @@ export interface SafeErrorLog {
  * request, its headers and whatever the client attached to it.
  */
 export function safeError(error: unknown): SafeErrorLog {
-  const details = error && typeof error === "object"
-    ? error as { code?: unknown; name?: unknown; statusCode?: unknown; status?: unknown }
-    : undefined;
-  const candidate =
-    details?.statusCode ?? details?.status;
-  const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599
-    ? candidate : 0;
-  // Never forward provider messages: URLs, authorization and bodies can contain secrets.
-  let message: SafeErrorLog["message"] = "Unknown error";
-  if (details?.code === "ETIMEDOUT" || details?.name === "TimeoutError") {
-    message = "Request timed out";
-  } else if (typeof details?.code === "string" && ["ECONNREFUSED", "ECONNRESET", "ENOTFOUND", "EAI_AGAIN", "ENETUNREACH"].includes(details.code)) {
-    message = "Network request failed";
-  } else if (details?.name === "ZodError" || details?.name === "ValidationError") {
-    message = "Validation failed";
-  } else if (status !== 0) {
-    message = "Upstream request failed";
+  try {
+    const details = error && typeof error === "object"
+      ? error as { code?: unknown; name?: unknown; statusCode?: unknown; status?: unknown }
+      : undefined;
+    const candidate =
+      details?.statusCode ?? details?.status;
+    const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599
+      ? candidate : 0;
+    // Never forward provider messages: URLs, authorization and bodies can contain secrets.
+    let message: SafeErrorLog["message"] = "Unknown error";
+    if (details?.code === "ETIMEDOUT" || details?.name === "TimeoutError") {
+      message = "Request timed out";
+    } else if (typeof details?.code === "string" && ["ECONNREFUSED", "ECONNRESET", "ENOTFOUND", "EAI_AGAIN", "ENETUNREACH"].includes(details.code)) {
+      message = "Network request failed";
+    } else if (details?.name === "ZodError" || details?.name === "ValidationError") {
+      message = "Validation failed";
+    } else if (status !== 0) {
+      message = "Upstream request failed";
+    }
+    return {
+      message,
+      status,
+    };
+  } catch {
+    // Getters and Proxy traps can throw secrets too. Never inspect or log that failure.
+    return { message: "Unknown error", status: 0 };
   }
-  return {
-    message,
-    status,
-  };
 }
