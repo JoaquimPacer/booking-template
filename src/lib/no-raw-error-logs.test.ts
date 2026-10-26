@@ -175,6 +175,22 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   }
   if (safeResults.size) shadows(source);
 
+  // React's memo and forwardRef under the names this file imports them by
+  // (import { memo as m } from "react"), and the names React itself is bound to.
+  const reactWrappers = new Set<string>();
+  const reactNamespaces = new Set<string>();
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "react") continue;
+    const clause = statement.importClause;
+    if (clause?.name) reactNamespaces.add(clause.name.text);
+    const bindings = clause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) reactNamespaces.add(bindings.name.text);
+    if (bindings && ts.isNamedImports(bindings)) for (const element of bindings.elements) {
+      if (["memo", "forwardRef"].includes((element.propertyName ?? element.name).text)) reactWrappers.add(element.name.text);
+    }
+  }
+
   // (await send()) as T is the same awaited call as await send().
   function unwrap(node: ts.Expression): ts.Expression {
     while (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) ||
@@ -366,32 +382,41 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   }
 
   // A component: a PascalCase name (its own, or the const it is assigned to)
-  // or a return value with JSX in it. Not one, whatever its name or return:
-  // a function handed inline to a call (replies.map(({ error }) => <li />)),
-  // memo and forwardRef aside, or one the file calls or passes by either name
-  // (LogReply(reply), (LogReply)(reply), LogReply.call(null, reply), replies.map(LogReply)).
+  // or a return value with JSX in it, that its file only renders. Not one,
+  // whatever its name or return: a function handed inline to a call
+  // (replies.map(({ error }) => <li />)), React's memo and forwardRef aside, or
+  // one whose name (either name) appears anywhere but its declaration, a JSX
+  // tag, an export, typeof, memo or forwardRef's first argument, or a property
+  // read such as Field.displayName. A call, an argument, an alias, an object
+  // property or a JSX prop can each hand it a provider result.
   function componentShaped(fn: ts.FunctionLikeDeclaration): boolean {
     const name = (ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name ? fn.name.text
       : ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : "";
     const names = new Set([name, ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : ""].filter(Boolean));
-    const wraps = (call: ts.CallExpression): boolean => {
+    // React's memo or forwardRef (imported from "react", bare or through its
+    // namespace), given this as its first argument. A memo from anywhere else
+    // may be a memoizer that calls it.
+    const wraps = (call: ts.CallExpression, argument: ts.Node): boolean => {
       const callee = call.expression;
-      const text = ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : "";
-      return ["memo", "forwardRef"].includes(text);
+      const react = ts.isIdentifier(callee) ? reactWrappers.has(callee.text)
+        : ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression) &&
+          reactNamespaces.has(callee.expression.text) && ["memo", "forwardRef"].includes(callee.name.text);
+      return react && call.arguments[0] === argument;
     };
-    if (ts.isCallExpression(fn.parent) && !wraps(fn.parent)) return false;
-    const usedAsFunction = (node: ts.Node): boolean => {
-      if (ts.isIdentifier(node) && names.has(node.text)) {
-        let child: ts.Node = node;
-        while (ts.isParenthesizedExpression(child.parent)) child = child.parent;
-        const parent = child.parent;
-        if (ts.isCallExpression(parent) && (parent.expression === child ||
-          (parent.arguments.some((argument) => argument === child) && !wraps(parent)))) return true;
-        if (ts.isPropertyAccessExpression(parent) && parent.expression === child &&
-          ["call", "apply", "bind"].includes(parent.name.text)) return true;
-      }
-      return !!ts.forEachChild(node, usedAsFunction);
+    if (ts.isCallExpression(fn.parent) && !wraps(fn.parent, fn)) return false;
+    const rendered = (node: ts.Identifier): boolean => {
+      let child: ts.Node = node;
+      while (ts.isParenthesizedExpression(child.parent)) child = child.parent;
+      const parent = child.parent;
+      return ((ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isVariableDeclaration(parent)) && parent.name === child) ||
+        ((ts.isJsxOpeningElement(parent) || ts.isJsxSelfClosingElement(parent) || ts.isJsxClosingElement(parent)) && parent.tagName === child) ||
+        ts.isExportSpecifier(parent) || ts.isExportAssignment(parent) || ts.isTypeQueryNode(parent) ||
+        (ts.isCallExpression(parent) && wraps(parent, child)) ||
+        (ts.isPropertyAccessExpression(parent) && (parent.name === child || !["call", "apply", "bind"].includes(parent.name.text))) ||
+        ((ts.isPropertyAssignment(parent) || ts.isPropertyDeclaration(parent) || ts.isMethodDeclaration(parent)) && parent.name === child);
     };
+    const usedAsFunction = (node: ts.Node): boolean =>
+      (ts.isIdentifier(node) && names.has(node.text) && !rendered(node)) || !!ts.forEachChild(node, usedAsFunction);
     if (names.size && usedAsFunction(source)) return false;
     if (COMPONENT_NAME.test(name)) return true;
     const jsx = (node: ts.Node): boolean =>
@@ -663,7 +688,7 @@ describe("error logging", () => {
     ["N08 onerror cleared with null", 'image.onerror = null;\nwindow.onunhandledrejection = null;', "src/components/send-status.tsx"],
     ["N09 a local validation string named error", 'const error = validate(form);\nif (error) setFieldError(error);', "src/components/send-status.tsx"],
     ["a lower-case arrow component returning JSX", 'const fieldHint = ({ error }) => <small>{error}</small>;', "src/components/field-hint.tsx"],
-    ["a memo-wrapped component with a form-text error prop", 'export const FieldNote = memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    ["a memo-wrapped component with a form-text error prop", 'import { memo } from "react"; export const FieldNote = memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
     ["a getDerivedStateFromError that keeps only a flag", 'class Boundary extends Component { static getDerivedStateFromError() { return { failed: true }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
@@ -687,8 +712,8 @@ describe("error logging", () => {
   // React.memo and React.forwardRef keep a component one, and Boolean(fault)
   // keeps only a flag, as !!fault does.
   it.each([
-    ["V01 a React.memo-wrapped arrow component with a form-text error prop", 'export const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
-    ["V03 a React.forwardRef named function expression", 'export const Field = React.forwardRef(function Field({ error }, ref) { return <label ref={ref}>{error}</label>; });', "src/components/field.tsx"],
+    ["V01 a React.memo-wrapped arrow component with a form-text error prop", 'import React from "react"; export const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    ["V03 a React.forwardRef named function expression", 'import React from "react"; export const Field = React.forwardRef(function Field({ error }, ref) { return <label ref={ref}>{error}</label>; });', "src/components/field.tsx"],
     ["V10c a getDerivedStateFromError flag set through Boolean(fault)", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: Boolean(fault) }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
