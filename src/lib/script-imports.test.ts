@@ -81,10 +81,11 @@ function literalPieces(node: ts.Expression): string[] {
  * and any other call or new expression whose first argument is a TypeScript
  * literal, new URL aside. A joined name with a TypeScript piece, or any such
  * name inside new URL, counts only where it is loaded: new Worker (through new
- * URL, inline or hoisted), module.register, or a require made by createRequire
- * under any name. Handed to readFileSync it is a file read. A console call
- * only prints its text. A specifier for import() or require() that is not a
- * string literal cannot be checked, so it counts as a hit too.
+ * URL, inline, hoisted or under fileURLToPath), module.register, or a require
+ * made by createRequire under any name. Handed to readFileSync it is a file
+ * read. A console call only prints its text. A specifier for import() or
+ * require() that is not a string literal cannot be checked, so it counts as a
+ * hit too.
  */
 function typeScriptImports(file: string, text: string, seen = new Set([resolve(file)])): number[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
@@ -138,6 +139,11 @@ function typeScriptImports(file: string, text: string, seen = new Set([resolve(f
   // new URL(name, base) is read as its name.
   const urlName = (node: ts.Expression) => ts.isNewExpression(node) && ts.isIdentifier(node.expression) &&
     node.expression.text === "URL" && node.arguments?.[0] ? node.arguments[0] : node;
+  // A loader handed fileURLToPath(new URL(name, base)), bare or as
+  // url.fileURLToPath, loads that name as a path.
+  const loadedName = (node: ts.Expression) => urlName(ts.isCallExpression(node) && node.arguments[0] &&
+    (ts.isIdentifier(node.expression) ? node.expression.text === "fileURLToPath"
+      : ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "fileURLToPath") ? node.arguments[0] : node);
   function visit(node: ts.Node) {
     let target: ts.Expression | undefined;
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
@@ -155,9 +161,9 @@ function typeScriptImports(file: string, text: string, seen = new Set([resolve(f
       // A bare literal is caught above, on the call. A hoisted name is read
       // through what it was declared or assigned as.
       else if (first && loader(node)) {
-        const name = urlName(first);
+        const name = loadedName(first);
         if (loadsPiece(name)) target = name;
-        else if (ts.isIdentifier(first) && (values.get(first.text) ?? []).some((value) => loadsPiece(urlName(value)))) target = first;
+        else if (ts.isIdentifier(first) && (values.get(first.text) ?? []).some((value) => loadsPiece(loadedName(value)))) target = first;
       }
     }
     if (target && (!ts.isStringLiteralLike(target) || loadsTypeScript(file, target.text, seen))) {
@@ -286,6 +292,8 @@ describe("scripts that run under plain Node", () => {
       ["J07 createRequire's require assigned later (let)", 'let load;\nload = createRequire(import.meta.url);\nload("./" + "leaf.ts");'],
       ["J10 new Worker on a hoisted template URL", 'const url = new URL(`./${name}.ts`, import.meta.url);\nnew Worker(url);'],
       ["J11 a worker_threads namespace Worker with a template path", 'new threads.Worker(`./${name}.ts`);'],
+      // The seventh version's review: a Worker handed fileURLToPath of a literal new URL.
+      ["Y02c new Worker on fileURLToPath(new URL(literal .ts))", 'new Worker(fileURLToPath(new URL("./worker.ts", import.meta.url)));'],
     ])("detects %s", (_shape, code) => {
       expect(typeScriptImports(join(dir, "entry.cjs"), code).length).toBeGreaterThan(0);
     });

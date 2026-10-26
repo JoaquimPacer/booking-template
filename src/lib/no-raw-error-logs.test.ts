@@ -217,9 +217,18 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return undefined;
   }
 
+  // Boolean(x) tests presence only while Boolean is the global one. A file
+  // that declares its own (const Boolean = (x) => x) may hand x on.
+  const declaresBoolean = (node: ts.Node): boolean =>
+    ((ts.isVariableDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
+      ts.isClassDeclaration(node) || ts.isParameter(node) || ts.isBindingElement(node) || ts.isImportSpecifier(node) ||
+      ts.isImportClause(node) || ts.isNamespaceImport(node)) &&
+      !!node.name && ts.isIdentifier(node.name) && node.name.text === "Boolean") || !!ts.forEachChild(node, declaresBoolean);
+  const globalBoolean = !declaresBoolean(source);
+
   // A caught value may be wrapped by safeError, type-checked, compared to a
-  // known message, or tested for presence (if, !, Boolean()). Anything else
-  // forwards it.
+  // known message, or tested for presence (if, !, the global Boolean()).
+  // Anything else forwards it.
   function forwarded(value: ts.Expression): boolean {
     const parent = value.parent;
     const safe = ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) &&
@@ -234,7 +243,7 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(comparison.operatorToken.kind);
     const presence = (ts.isIfStatement(parent) && parent.expression === value) ||
       (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken) ||
-      (ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) && parent.expression.text === "Boolean" &&
+      (ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) && parent.expression.text === "Boolean" && globalBoolean &&
         parent.arguments.length === 1 && parent.arguments[0] === value);
     // A hook's dependency list only tells React when to rerun; it forwards nothing.
     const dependency = ts.isArrayLiteralExpression(parent) && ts.isCallExpression(parent.parent) &&
@@ -715,6 +724,46 @@ describe("error logging", () => {
     ["V01 a React.memo-wrapped arrow component with a form-text error prop", 'import React from "react"; export const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
     ["V03 a React.forwardRef named function expression", 'import React from "react"; export const Field = React.forwardRef(function Field({ error }, ref) { return <label ref={ref}>{error}</label>; });', "src/components/field.tsx"],
     ["V10c a getDerivedStateFromError flag set through Boolean(fault)", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: Boolean(fault) }; } }', "src/components/send-status.tsx"],
+  ])("allows %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file)).toEqual([]);
+  });
+
+  // Raw shapes from the seventh version's review. Each hands a component-shaped
+  // helper a provider result some way other than a direct call or argument: an
+  // object property, an alias, a JSX render prop, an array, a cast, a non-null
+  // assertion, a comma expression, new, a default parameter, a factory's
+  // return, or a memo that is not React's. A component is exempt only where
+  // its file renders it. Z15d: a file's own Boolean may return its argument,
+  // so only the global Boolean() is a presence test.
+  it.each([
+    ["Z05 helper assigned to an object property, then handlers.log(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst handlers = { log: LogReply };\nexport async function notify(m) { handlers.log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z05b helper in a shorthand property, then handlers.LogReply(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst handlers = { LogReply };\nexport async function notify(m) { handlers.LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z07 helper aliased to a const, then called", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst log = LogReply;\nexport async function notify(m) { log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z08 JSX render helper handed as a render prop to a same-file list", 'function renderReply({ error }) { if (error) logger.error("send failed", error); return <li>sent</li>; }\nfunction Replies({ items, render }) { return <ul>{items.map(render)}</ul>; }\nexport default async function Page() {\n  const replies = await Promise.all(ms.map((m) => resend.emails.send(m)));\n  return <Replies items={replies} render={renderReply} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["Z09 helper held in an array, called in a loop", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { const reply = await resend.emails.send(m); for (const f of [LogReply, track]) f(reply); }', "src/components/send-status.tsx"],
+    ["Z10 helper called through a TypeScript cast", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { (LogReply as (r: unknown) => void)(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z10b helper called with a non-null assertion", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { LogReply!(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z11 helper called through a comma expression (0, LogReply)(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { (0, LogReply)(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z12 helper invoked with new", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { new LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z13 helper as a default parameter value, then called", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m, log = LogReply) { log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z14 helper returned from a factory, then called", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst pick = () => LogReply;\nexport async function notify(m) { pick()(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z02b helper as second argument of a user-land memo(key, fn)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst logOnce = memo("send", LogReply);\nexport async function notify(m) { logOnce(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z02c helper wrapped by a member named memo (cache.memo)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst logOnce = cache.memo(LogReply);\nexport async function notify(m) { logOnce(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z02d helper as first argument of a bare user-land memo(fn)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst logOnce = memo(LogReply);\nexport async function notify(m) { logOnce(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z02e user-land memo imported from a memoizer, helper as first argument", 'import memo from "micro-memoize";\nfunction LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst logOnce = memo(LogReply);\nexport async function notify(m) { logOnce(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["Z15d getDerivedStateFromError with Boolean shadowed by an identity function", 'const Boolean = (x) => x;\nclass Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: Boolean(fault) }; } }', "src/components/send-status.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Benign shapes from the same review: memo and forwardRef imported from
+  // "react", under any name or through its namespace, keep a component one.
+  it.each([
+    ["Z03i React.memo(forwardRef(Field)) by name, both imported from react", 'import React, { forwardRef } from "react";\nfunction Field({ error }, ref) { return <label ref={ref}>{error}</label>; }\nexport default React.memo(forwardRef(Field));', "src/components/field.tsx"],
+    ["Z03bi React.memo(React.forwardRef(inline arrow)), React imported as a namespace", 'import * as React from "react";\nexport const Field = React.memo(React.forwardRef(({ error }, ref) => <label ref={ref}>{error}</label>));', "src/components/field.tsx"],
+    ["Z20 memo(FieldNote) by name, memo imported from react under an alias", 'import { memo as pure } from "react";\nfunction FieldNote({ error }) { return <em>{error}</em>; }\nexport default pure(FieldNote);', "src/components/field-note.tsx"],
+    ["Z21 a React.memo-wrapped arrow, React imported from react", 'import React from "react";\nexport const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    ["Z22 a forwardRef-wrapped arrow, forwardRef imported from react", 'import { forwardRef } from "react";\nexport const Field = forwardRef(({ error }, ref) => <label ref={ref}>{error}</label>);', "src/components/field.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
   });
