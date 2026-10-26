@@ -373,7 +373,11 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       else hit(binding);
     }
     if (ts.isCallExpression(node)) {
-      inspectAnyHandler(rejectionHandler(node));
+      // main flags a null .catch, .then or listener handler; so does this, or a
+      // success handler beside it (.then(log, null)) would pass where main fails.
+      const handler = rejectionHandler(node);
+      if (handler?.kind === ts.SyntaxKind.NullKeyword && memberName(node.expression) !== "setUncaughtExceptionCaptureCallback") hit(handler);
+      else inspectAnyHandler(handler);
       // A .then success handler receives the provider result itself. One passed
       // by name is audited where this file declares it, as a rejection handler
       // is. One the file does not declare (an import, a state setter) is not:
@@ -738,6 +742,30 @@ describe("error logging", () => {
     ["N11e Boolean replaced by Object.assign of an imported namespace", 'import * as shim from "./shim";\nObject.assign(globalThis, shim);\nexport async function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "src/components/send-status.tsx"],
     ["N11f Boolean replaced through eval in a script", 'eval("globalThis.Bool" + "ean = (x) => x");\nasync function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "scripts/notify.cjs"],
   ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Raw shapes from the tenth version's review: a .then success handler that
+  // logs the provider result whole, named, inline or imported, beside a null
+  // rejection handler. Main flags the null; the ninth version trusted it.
+  it.each([
+    ["Q04d a named success handler logging the reply whole, beside null", 'function onOk(reply) { logger.error("sent", reply); }\nexport function notify(m) { resend.emails.send(m).then(onOk, null); }', "src/components/send-status.tsx"],
+    ["Q04g an inline success handler logging the reply whole, beside null", 'export function notify(m) { resend.emails.send(m).then((reply) => logger.error("sent", reply), null); }', "src/components/send-status.tsx"],
+    ["Q04h an imported success handler beside null", 'import { logReply } from "@/lib/log-reply";\nexport function notify(m) { resend.emails.send(m).then(logReply, null); }', "src/components/send-status.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // A null .catch, .then or error-listener handler flags, by design, as on
+  // main: a success handler beside it may log the result (Q04d). A null given
+  // to setUncaughtExceptionCaptureCallback, an onerror property or a boundary
+  // field still installs none and passes.
+  it.each([
+    ["Q05 task.catch(null)", 'task.catch(null);', "src/components/send-status.tsx"],
+    ["Q05b task.then(done, null)", 'task.then(done, null);', "src/components/send-status.tsx"],
+    ["Q05c process.on(\"unhandledRejection\", null)", 'process.on("unhandledRejection", null);', "src/components/send-status.tsx"],
+    ["Q05d task.catch(null, handler), whose second argument catch ignores", 'task.catch(null, (caught) => logger.error("failed", caught));', "src/components/send-status.tsx"],
+  ])("flags %s, by design", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
