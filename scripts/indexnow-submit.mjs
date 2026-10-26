@@ -16,8 +16,6 @@
 // The key must also be served at <site>/indexnow.txt (see src/app/indexnow.txt/
 // route.ts); engines fetch it once to verify we own the host.
 
-import { safeError } from "../src/lib/redact.ts";
-
 const env = process.env.VERCEL_ENV;
 const key = process.env.INDEXNOW_KEY;
 // Same resolution chain as src/lib/seo.ts getSiteUrl(), so we always submit
@@ -72,8 +70,10 @@ try {
   });
   // 200/202 = accepted. 403 = key file mismatch. 422 = URLs don't match host.
   log(`submitted ${urls.length} URLs for ${host}: HTTP ${submit.status}`);
-} catch (err) {
-  // Never fail a deploy over a ping.
-  console.warn("[indexnow] skip:", safeError(err));
+} catch {
+  // Never fail a deploy over a ping. Fixed text only: a fetch error can quote
+  // the request, and plain Node scripts must not import TypeScript (see
+  // src/lib/script-imports.test.ts), so safeError is out of reach here.
+  console.warn("[indexnow] skip: submission failed");
 }
 process.exit(0);
