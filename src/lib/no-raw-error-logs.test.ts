@@ -96,20 +96,16 @@ function rawErrorLogs(): string[] {
 // process.setUncaughtExceptionCaptureCallback, a class componentDidCatch or
 // getDerivedStateFromError (method or class field), an allSettled reason and a
 // provider's error result, whether destructured (declaration, for-of,
-// assignment, rest element, nested pattern, or the parameter of any function
-// but a component) or read as result.error or result["error"] (declared or
-// assigned, cast or not, or in a .then success handler, inline or passed by
-// name). A component, a function with a PascalCase name or a JSX return, gets
-// its error prop from its parent, usually form text as in FieldError({ error }).
-// A function its file uses as a function is not a component, whatever its name
-// or return. That is one handed inline to a call, or one that, under its own
-// name or its const's, is called (directly, through parentheses, or by .call,
-// .apply or .bind) or passed to a call. memo and forwardRef, bare or as
-// React.memo and React.forwardRef, keep a component one. Open, the G03 trade:
-// a helper exported and called only from another file (V06) still reads as a
-// component here, because a one-file rule cannot see that caller. Only in
-// error.tsx and global-error.tsx, where Next.js passes the caught value, is a
-// component's error prop audited, destructured or read as props.error.
+// assignment, rest element, nested pattern, or the parameter of any function,
+// a component's included) or read as result.error or result["error"] (declared
+// or assigned, cast or not, or in a .then success handler, inline or passed by
+// name). The guard fails closed, like safeError: no function is exempt for its
+// name, its JSX return or how its file uses it, so a component's { error } prop
+// is audited even when it is form text, as in FieldError({ error }). Rename such
+// a prop; the guard cannot tell form text from a provider error. The one rule by
+// path: in src/app/**/error.tsx and src/app/**/global-error.tsx, where Next.js
+// passes the caught value as the error prop, props.error read off a plain
+// parameter is audited as well.
 // Each is checked the same way. A destructured catch or handler parameter
 // always fails, because its pieces (message, cause, config) are the provider
 // text safeError exists to drop.
@@ -128,17 +124,14 @@ const BOUNDARY_METHODS = new Set(["componentDidCatch", "getDerivedStateFromError
 // (return resend.emails.send(message)) must never be added here.
 const SAFE_RESULTS = [{ module: "src/app/book/[slug]/actions.ts", name: "createPendingBooking" }];
 const EXTENSION = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
-// Next.js hands the caught value to these files' components as the error prop.
-// Anywhere else an error prop is usually form text, as in FieldError({ error }).
-const BOUNDARY_FILE = /(^|[\\/])(global-)?error\.[jt]sx?$/;
-// A component's name: ErrorPage, FieldError. An all-caps route handler (POST) is not one.
-const COMPONENT_NAME = /^[A-Z](?=[A-Za-z0-9]*[a-z])[A-Za-z0-9]*$/;
+// Next.js error boundaries, by path from the repository root. Their component
+// receives the caught value as the error prop, so props.error counts there.
+const BOUNDARY_FILE = /^src\/app\/(.+\/)?(global-)?error\.[jt]sx?$/;
 
 function unsafeCaughtReferences(text: string, file = ""): number[] {
   const source = ts.createSourceFile("audit.tsx", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const hits: number[] = [];
   const settles = text.includes("allSettled");
-  const boundary = BOUNDARY_FILE.test(file);
   // Two rules can reach the same node (an inline .then handler's { error } is
   // also a parameter pattern); it counts once.
   const reached = new Set<number>();
@@ -148,10 +141,13 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     reached.add(start);
     hits.push(source.getLineAndCharacterOfPosition(start).line + 1);
   };
+  // The file's path from the repository root names its module for the
+  // allowlist and marks an error boundary.
+  const from = relative(ROOT, resolve(ROOT, file)).split(sep).join("/");
+  const boundary = BOUNDARY_FILE.test(from);
   // Allowlisted exports, imported by name (aliased or not) from the module the
   // allowlist names, written relative or with @/. The same name from any other
   // module is audited.
-  const from = relative(ROOT, resolve(ROOT, file)).split(sep).join("/");
   const safeResults = new Set<string>();
   for (const statement of source.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
@@ -174,22 +170,6 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     ts.forEachChild(node, shadows);
   }
   if (safeResults.size) shadows(source);
-
-  // React's memo and forwardRef under the names this file imports them by
-  // (import { memo as m } from "react"), and the names React itself is bound to.
-  const reactWrappers = new Set<string>();
-  const reactNamespaces = new Set<string>();
-  for (const statement of source.statements) {
-    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
-      statement.moduleSpecifier.text !== "react") continue;
-    const clause = statement.importClause;
-    if (clause?.name) reactNamespaces.add(clause.name.text);
-    const bindings = clause?.namedBindings;
-    if (bindings && ts.isNamespaceImport(bindings)) reactNamespaces.add(bindings.name.text);
-    if (bindings && ts.isNamedImports(bindings)) for (const element of bindings.elements) {
-      if (["memo", "forwardRef"].includes((element.propertyName ?? element.name).text)) reactWrappers.add(element.name.text);
-    }
-  }
 
   // (await send()) as T is the same awaited call as await send().
   function unwrap(node: ts.Expression): ts.Expression {
@@ -217,14 +197,16 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return undefined;
   }
 
-  // Boolean(x) tests presence only while Boolean is the global one. A file
-  // that declares its own (const Boolean = (x) => x) may hand x on.
-  const declaresBoolean = (node: ts.Node): boolean =>
-    ((ts.isVariableDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
-      ts.isClassDeclaration(node) || ts.isParameter(node) || ts.isBindingElement(node) || ts.isImportSpecifier(node) ||
-      ts.isImportClause(node) || ts.isNamespaceImport(node)) &&
-      !!node.name && ts.isIdentifier(node.name) && node.name.text === "Boolean") || !!ts.forEachChild(node, declaresBoolean);
-  const globalBoolean = !declaresBoolean(source);
+  // Boolean(x) tests presence only while Boolean is the global one, so a file
+  // that names Boolean anywhere but as the callee of a plain Boolean(...) call
+  // loses the allowance. That covers one that declares, imports or takes its
+  // own (const Boolean = (x) => x) and one that replaces the global
+  // (globalThis.Boolean = (x) => x, or "Boolean" as a key). Open: a module
+  // that replaces it for another file is not seen here.
+  const namesBoolean = (node: ts.Node): boolean =>
+    ((ts.isIdentifier(node) || ts.isStringLiteralLike(node)) && node.text === "Boolean" &&
+      !(ts.isCallExpression(node.parent) && node.parent.expression === node)) || !!ts.forEachChild(node, namesBoolean);
+  const globalBoolean = !namesBoolean(source);
 
   // A caught value may be wrapped by safeError, type-checked, compared to a
   // known message, or tested for presence (if, !, the global Boolean()).
@@ -353,9 +335,9 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
 
   // A pattern that pulls error (or, beside allSettled, reason) out of a value
   // exposes the caught value under a local name.
-  function exposes(name: ts.Node | undefined, error = true): name is ts.Identifier | ts.StringLiteral {
+  function exposes(name: ts.Node | undefined): name is ts.Identifier | ts.StringLiteral {
     return !!name && (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
-      ((error && name.text === "error") || (settles && name.text === "reason"));
+      (name.text === "error" || (settles && name.text === "reason"));
   }
 
   function enclosingBlock(node: ts.Node): ts.Node {
@@ -364,19 +346,18 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return scope;
   }
 
-  // With error false, only an allSettled reason counts.
-  function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node, error = true) {
+  function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node) {
     for (const element of pattern.elements) {
       // A rest element keeps error along with every other unnamed property.
       if (element.dotDotDotToken) {
-        if (error && ts.isIdentifier(element.name)) inspectErrorReads(scope, element.name.text);
+        if (ts.isIdentifier(element.name)) inspectErrorReads(scope, element.name.text);
         continue;
       }
-      if (!exposes(element.propertyName ?? element.name, error)) {
+      if (!exposes(element.propertyName ?? element.name)) {
         // A nested pattern ({ data: { error } }) reaches error one level down.
         // Open: an array pattern ([{ error }]) is not followed, here or as a
         // declaration; the review named only object nesting, so it waits.
-        if (ts.isObjectBindingPattern(element.name)) inspectPattern(element.name, scope, error);
+        if (ts.isObjectBindingPattern(element.name)) inspectPattern(element.name, scope);
         continue;
       }
       if (ts.isIdentifier(element.name)) inspect(scope, element.name.text);
@@ -388,53 +369,6 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   function inspectResult(binding: ts.BindingName | undefined, scope: ts.Node) {
     if (binding && ts.isIdentifier(binding)) inspectErrorReads(scope, binding.text);
     else if (binding && ts.isObjectBindingPattern(binding)) inspectPattern(binding, scope);
-  }
-
-  // A component: a PascalCase name (its own, or the const it is assigned to)
-  // or a return value with JSX in it, that its file only renders. Not one,
-  // whatever its name or return: a function handed inline to a call
-  // (replies.map(({ error }) => <li />)), React's memo and forwardRef aside, or
-  // one whose name (either name) appears anywhere but its declaration, a JSX
-  // tag, an export, typeof, memo or forwardRef's first argument, or a property
-  // read such as Field.displayName. A call, an argument, an alias, an object
-  // property or a JSX prop can each hand it a provider result.
-  function componentShaped(fn: ts.FunctionLikeDeclaration): boolean {
-    const name = (ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name ? fn.name.text
-      : ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : "";
-    const names = new Set([name, ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : ""].filter(Boolean));
-    // React's memo or forwardRef (imported from "react", bare or through its
-    // namespace), given this as its first argument. A memo from anywhere else
-    // may be a memoizer that calls it.
-    const wraps = (call: ts.CallExpression, argument: ts.Node): boolean => {
-      const callee = call.expression;
-      const react = ts.isIdentifier(callee) ? reactWrappers.has(callee.text)
-        : ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression) &&
-          reactNamespaces.has(callee.expression.text) && ["memo", "forwardRef"].includes(callee.name.text);
-      return react && call.arguments[0] === argument;
-    };
-    if (ts.isCallExpression(fn.parent) && !wraps(fn.parent, fn)) return false;
-    const rendered = (node: ts.Identifier): boolean => {
-      let child: ts.Node = node;
-      while (ts.isParenthesizedExpression(child.parent)) child = child.parent;
-      const parent = child.parent;
-      return ((ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isVariableDeclaration(parent)) && parent.name === child) ||
-        ((ts.isJsxOpeningElement(parent) || ts.isJsxSelfClosingElement(parent) || ts.isJsxClosingElement(parent)) && parent.tagName === child) ||
-        ts.isExportSpecifier(parent) || ts.isExportAssignment(parent) || ts.isTypeQueryNode(parent) ||
-        (ts.isCallExpression(parent) && wraps(parent, child)) ||
-        (ts.isPropertyAccessExpression(parent) && (parent.name === child || !["call", "apply", "bind"].includes(parent.name.text))) ||
-        ((ts.isPropertyAssignment(parent) || ts.isPropertyDeclaration(parent) || ts.isMethodDeclaration(parent)) && parent.name === child);
-    };
-    const usedAsFunction = (node: ts.Node): boolean =>
-      (ts.isIdentifier(node) && names.has(node.text) && !rendered(node)) || !!ts.forEachChild(node, usedAsFunction);
-    if (names.size && usedAsFunction(source)) return false;
-    if (COMPONENT_NAME.test(name)) return true;
-    const jsx = (node: ts.Node): boolean =>
-      ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node) || !!ts.forEachChild(node, jsx);
-    // Returns inside a nested function are that function's, not this one's.
-    const returnsJsx = (node: ts.Node): boolean => (ts.isReturnStatement(node) && !!node.expression && jsx(node.expression)) ||
-      (!ts.isFunctionLike(node) && !!ts.forEachChild(node, returnsJsx));
-    if (!fn.body) return false;
-    return ts.isBlock(fn.body) ? returnsJsx(fn.body) : jsx(fn.body);
   }
 
   function find(node: ts.Node) {
@@ -476,12 +410,10 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     }
     // A parameter pattern pulls error out of whatever the caller passes, a
     // provider result included (a forEach over sends, a helper, a .then
-    // handler), so it counts in every function but a component outside a
-    // boundary file. An allSettled reason counts everywhere, and in a boundary
-    // file so does props.error.
+    // handler, a JSX spread into a component), so it counts in every function,
+    // whatever its name, return or use. In a boundary file so does props.error.
     if (ts.isParameter(node) && "body" in node.parent && node.parent.body) {
-      const audited = boundary || !componentShaped(node.parent as ts.FunctionLikeDeclaration);
-      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body, audited);
+      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body);
       else if (boundary && ts.isIdentifier(node.name)) inspectErrorReads(node.parent.body, node.name.text);
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
@@ -594,11 +526,18 @@ describe("error logging", () => {
     ].join("\n"), "src/app/error.tsx")).toEqual([]);
   });
 
-  // A form field's error prop is the form's own text, not a caught value.
-  it("audits a component's error prop only in error.tsx and global-error.tsx", () => {
+  // No component is exempt: a form field's { error } prop is audited in every
+  // file, so FieldError flags, by design. props.error off a plain parameter
+  // counts only by path, in src/app/**/error.tsx and global-error.tsx, where
+  // Next.js passes the caught value.
+  it("audits an error prop in every file, and props.error only in a boundary file", () => {
     const field = 'export function FieldError({ error }) { return error ? <p role="alert">{error}</p> : null; }';
-    expect(unsafeCaughtReferences(field, "src/components/field-error.tsx")).toEqual([]);
+    expect(unsafeCaughtReferences(field, "src/components/field-error.tsx").length).toBeGreaterThan(0);
     expect(unsafeCaughtReferences(field, "src/app/global-error.tsx").length).toBeGreaterThan(0);
+    const page = 'export default function ErrorPage(props) { return <p>{props.error.message}</p>; }';
+    expect(unsafeCaughtReferences(page, "src/app/book/[slug]/error.tsx").length).toBeGreaterThan(0);
+    expect(unsafeCaughtReferences(page, "src/app/global-error.tsx").length).toBeGreaterThan(0);
+    expect(unsafeCaughtReferences(page, "src/components/error.tsx")).toEqual([]);
   });
 
   it("allows the eight variants when every value goes through safeError", () => {
@@ -683,21 +622,17 @@ describe("error logging", () => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
-  // Benign shapes from the same review. N05, the arrow and the memo-wrapped
-  // arrow are components, by name or by their JSX return, so their error prop
-  // is their own text.
+  // Benign shapes from the same review. N05 and the two component rows that
+  // stood here now flag, by design, with the rows further down.
   it.each([
     ["N01 an error message compared to a literal", 'const result = await resend.emails.send(message);\nif (result.error?.message === "rate_limited") return retryLater();', "src/components/send-status.tsx"],
     ["N02 data only from a provider result", 'const { data } = await resend.emails.send(message);\nlogger.info("sent", data?.id);', "src/components/send-status.tsx"],
     ["N03 the allowlisted action under an alias", 'import { createPendingBooking as book } from "./actions";\nconst outcome = await book(input);\nif (!outcome.ok) setSubmitError(outcome.error);', "src/app/book/[slug]/booking-flow.tsx"],
     ["N04 safeError in a catch, fixed text returned", 'try { await sync(); } catch (failure) {\n  console.error("sync failed:", safeError(failure));\n  return { ok: false, error: "Sync failed." };\n}', "src/components/send-status.tsx"],
-    ["N05 a form hint with a string error prop", 'export function TextHint({ error, label }: { error?: string; label: string }) {\n  return <span>{error ?? label}</span>;\n}', "src/components/text-hint.tsx"],
     ["N06 a reason field outside allSettled", 'const { reason } = await cancelBooking(id);\nlogger.info("cancelled", reason);', "src/components/send-status.tsx"],
     ["N07 a .then success handler reading data only", 'resend.emails.send(message).then(({ data }) => logger.info("sent", data?.id));', "src/components/send-status.tsx"],
     ["N08 onerror cleared with null", 'image.onerror = null;\nwindow.onunhandledrejection = null;', "src/components/send-status.tsx"],
     ["N09 a local validation string named error", 'const error = validate(form);\nif (error) setFieldError(error);', "src/components/send-status.tsx"],
-    ["a lower-case arrow component returning JSX", 'const fieldHint = ({ error }) => <small>{error}</small>;', "src/components/field-hint.tsx"],
-    ["a memo-wrapped component with a form-text error prop", 'import { memo } from "react"; export const FieldNote = memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
     ["a getDerivedStateFromError that keeps only a flag", 'class Boundary extends Component { static getDerivedStateFromError() { return { failed: true }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
@@ -705,7 +640,7 @@ describe("error logging", () => {
 
   // Raw shapes from the sixth version's review. Each helper is passed by name
   // to forEach or .map, called under its const's name, or called through
-  // parentheses or .call, so its file uses it as a function, not a component.
+  // parentheses or .call. Its own { error } parameter is audited.
   it.each([
     ["V12 a PascalCase helper passed by name to forEach over sends", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notifyAll(ms) {\n  const replies = await Promise.all(ms.map((m) => resend.emails.send(m)));\n  replies.forEach(LogReply);\n}', "src/components/send-status.tsx"],
     ["V13 a JSX render helper passed by name to .map over sends", 'function renderReply({ error }) { if (error) logger.error("send failed", error); return <li>sent</li>; }\nexport default async function Page() {\n  const replies = await Promise.all(ms.map((m) => resend.emails.send(m)));\n  return <ul>{replies.map(renderReply)}</ul>;\n}', "src/app/book/[slug]/page.tsx"],
@@ -717,12 +652,9 @@ describe("error logging", () => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
-  // Benign shapes from the same review: memo and forwardRef written as
-  // React.memo and React.forwardRef keep a component one, and Boolean(fault)
-  // keeps only a flag, as !!fault does.
+  // A benign shape from the same review: Boolean(fault) keeps only a flag, as
+  // !!fault does. V01 and V03 now flag, by design, further down.
   it.each([
-    ["V01 a React.memo-wrapped arrow component with a form-text error prop", 'import React from "react"; export const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
-    ["V03 a React.forwardRef named function expression", 'import React from "react"; export const Field = React.forwardRef(function Field({ error }, ref) { return <label ref={ref}>{error}</label>; });', "src/components/field.tsx"],
     ["V10c a getDerivedStateFromError flag set through Boolean(fault)", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: Boolean(fault) }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
@@ -732,9 +664,8 @@ describe("error logging", () => {
   // helper a provider result some way other than a direct call or argument: an
   // object property, an alias, a JSX render prop, an array, a cast, a non-null
   // assertion, a comma expression, new, a default parameter, a factory's
-  // return, or a memo that is not React's. A component is exempt only where
-  // its file renders it. Z15d: a file's own Boolean may return its argument,
-  // so only the global Boolean() is a presence test.
+  // return, or a memo that is not React's. Z15d: a file's own Boolean may
+  // return its argument, so only the global Boolean() is a presence test.
   it.each([
     ["Z05 helper assigned to an object property, then handlers.log(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst handlers = { log: LogReply };\nexport async function notify(m) { handlers.log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
     ["Z05b helper in a shorthand property, then handlers.LogReply(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst handlers = { LogReply };\nexport async function notify(m) { handlers.LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
@@ -756,16 +687,86 @@ describe("error logging", () => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
-  // Benign shapes from the same review: memo and forwardRef imported from
-  // "react", under any name or through its namespace, keep a component one.
+  // Raw shapes from the eighth version's review, each let through by the
+  // component exemption that is now gone: a provider result spread or passed
+  // into a JSX tag (W13), a component-shaped function with no name the old
+  // rule followed (W15), a call through valueOf() or prototype.constructor
+  // (W14), React's memo or namespace shadowed by a parameter (W16), and a
+  // replaced globalThis.Boolean (W11e). G03, V06 and V06b, the old cross-file
+  // trade, flag in the file that declares the helper.
   it.each([
+    ["W13 provider result spread into a JSX-tag-only component", 'function SendStatus({ error }) { if (error) logger.error("send failed", error); return null; }\nexport default async function Page({ m }) {\n  const reply = await resend.emails.send(m);\n  return <SendStatus {...reply} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["W13b provider result spread into a react-memo component", 'import { memo } from "react";\nconst SendStatus = memo(function SendStatus({ error }) { if (error) logger.error("send failed", error); return null; });\nexport default async function Page({ m }) {\n  const reply = await resend.emails.send(m);\n  return <SendStatus {...reply} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["W13c awaited send spread inline into a JSX tag", 'function SendStatus({ error }) { if (error) logger.error("send failed", error); return null; }\nexport default async function Page({ m }) {\n  return <SendStatus {...(await resend.emails.send(m))} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["W13d rest of a destructured result spread into a JSX tag", 'function SendStatus({ error }) { if (error) logger.error("send failed", error); return null; }\nexport default async function Page({ m }) {\n  const { data, ...rest } = await resend.emails.send(m);\n  return <SendStatus id={data?.id} {...rest} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["W13f aliased result, error={r.error} on a JSX tag", 'function SendStatus({ error }) { if (error) logger.error("send failed", error); return null; }\nexport default async function Page({ m }) {\n  const reply = await resend.emails.send(m);\n  const r = reply;\n  return <SendStatus error={r.error} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["W13i (await send()).error inline as a JSX prop", 'function SendStatus({ error }) { if (error) logger.error("send failed", error); return null; }\nexport default async function Page({ m }) {\n  return <SendStatus error={(await resend.emails.send(m)).error} />;\n}', "src/app/book/[slug]/page.tsx"],
+    ["W14 LogReply.valueOf()(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { LogReply.valueOf()(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W14b LogReply.prototype.constructor(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { LogReply.prototype.constructor(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15 inline arrow returning JSX in an object literal, called through it", 'const view = { status: ({ error }) => { if (error) logger.error("send failed", error); return <p>failed</p>; } };\nexport async function notify(m) { view.status(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15b PascalCase function expression in an object literal, called through it", 'const handlers = { log: function LogReply({ error }) { if (error) logger.error("send failed", error); } };\nexport async function notify(m) { handlers.log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15c object-literal method returning JSX, called", 'const view = { status({ error }) { if (error) logger.error("send failed", error); return <p>failed</p>; } };\nexport async function notify(m) { view.status(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15d class method returning JSX, called", 'class View { status({ error }) { if (error) logger.error("send failed", error); return <p>failed</p>; } }\nexport async function notify(m) { new View().status(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15e PascalCase function expression assigned to a member, called", 'const handlers = {};\nhandlers.log = function LogReply({ error }) { if (error) logger.error("send failed", error); };\nexport async function notify(m) { handlers.log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15f PascalCase function expression assigned to a let, called", 'let log;\nlog = function LogReply({ error }) { if (error) logger.error("send failed", error); };\nexport async function notify(m) { log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15g JSX-returning arrow in an array, called by index", 'const steps = [({ error }) => { if (error) logger.error("send failed", error); return <p>failed</p>; }];\nexport async function notify(m) { steps[0](await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15h JSX-returning arrow as a default parameter, called", 'export async function notify(m, log = ({ error }) => { if (error) logger.error("send failed", error); return <p>failed</p>; }) { log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W15i PascalCase function expression returned from a factory, called", 'const pick = () => function LogReply({ error }) { if (error) logger.error("send failed", error); };\nexport async function notify(m) { pick()(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W16 react memo name shadowed by a parameter, wraps and returns it", 'import { memo } from "react";\nfunction LogReply({ error }) { if (error) logger.error("send failed", error); }\nfunction wrap(memo) { return memo(LogReply); }\nexport async function notify(m) { wrap((f) => f)(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W16b React namespace shadowed by a parameter, React.memo returns it", 'import * as React from "react";\nfunction LogReply({ error }) { if (error) logger.error("send failed", error); }\nfunction wrap(React) { return React.memo(LogReply); }\nexport async function notify(m) { wrap({ memo: (f) => f })(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["W11e provider error through Boolean after globalThis.Boolean is replaced", 'globalThis.Boolean = (x) => x;\nexport async function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "src/components/send-status.tsx"],
+    ["G03 lowercase component returning JSX logs error.message", 'export function sendStatus({ error }) {\n  useEffect(() => { if (error) logger.error("send failed", error.message); }, [error]);\n  return <p>Send failed</p>;\n}', "src/components/send-status.tsx"],
+    ["V06 PascalCase helper exported for another file's call, in its own file", 'export function LogReply({ error }) { if (error) logger.error("send failed", error); }', "src/lib/log-reply.ts"],
+    ["V06b lowercase JSX render helper exported for another file's call, in its own file", 'export function renderReply({ error }) { if (error) logger.error("send failed", error); return <p>Failed</p>; }', "src/components/render-reply.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Benign shapes the old component exemption let through. Each { error } prop
+  // here is form text, but the guard fails closed and cannot tell, so each one
+  // flags, by design; a real component renames the prop. Each comment names
+  // what the old rule trusted.
+  it.each([
+    // Z03: React.memo(forwardRef(Field)) by name, with no react import.
+    ["Z03 React.memo(forwardRef(Field)) nested, by name", 'function Field({ error }, ref) { return <label ref={ref}>{error}</label>; }\nexport default React.memo(forwardRef(Field));', "src/components/field.tsx"],
+    // Z03i: the same wrappers, both imported from react.
     ["Z03i React.memo(forwardRef(Field)) by name, both imported from react", 'import React, { forwardRef } from "react";\nfunction Field({ error }, ref) { return <label ref={ref}>{error}</label>; }\nexport default React.memo(forwardRef(Field));', "src/components/field.tsx"],
+    // Z03bi: the wrappers through a namespace import, around an inline arrow.
     ["Z03bi React.memo(React.forwardRef(inline arrow)), React imported as a namespace", 'import * as React from "react";\nexport const Field = React.memo(React.forwardRef(({ error }, ref) => <label ref={ref}>{error}</label>));', "src/components/field.tsx"],
+    // Z20: react's memo under an alias, wrapping a component by name.
     ["Z20 memo(FieldNote) by name, memo imported from react under an alias", 'import { memo as pure } from "react";\nfunction FieldNote({ error }) { return <em>{error}</em>; }\nexport default pure(FieldNote);', "src/components/field-note.tsx"],
+    // Z21: React.memo around an arrow, React imported.
     ["Z21 a React.memo-wrapped arrow, React imported from react", 'import React from "react";\nexport const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    // Z22: forwardRef imported from react, around an arrow.
     ["Z22 a forwardRef-wrapped arrow, forwardRef imported from react", 'import { forwardRef } from "react";\nexport const Field = forwardRef(({ error }, ref) => <label ref={ref}>{error}</label>);', "src/components/field.tsx"],
-  ])("allows %s", (_shape, code, file) => {
-    expect(unsafeCaughtReferences(code, file)).toEqual([]);
+    // Z04: a component referenced only as a JSX tag.
+    ["Z04 component referenced only as a JSX tag", 'function LogReply({ error }) { return <p role="alert">{error}</p>; }\nexport function Form({ message }) { return <LogReply error={message} />; }', "src/components/form.tsx"],
+    // Z17: a displayName read and a default export.
+    ["Z17 component given a displayName, exported default", 'function Field({ error }) { return <em>{error}</em>; }\nField.displayName = "Field";\nexport default Field;', "src/components/field.tsx"],
+    // Z19: a typeof type query and a JSX tag.
+    ["Z19 component used in typeof and JSX only", 'export function Field({ error }) { return <em>{error}</em>; }\nexport type FieldProps = Parameters<typeof Field>[0];\nexport function Form() { return <Field error="Required" />; }', "src/components/field.tsx"],
+    // V01: React.memo around an arrow, React imported on the same line.
+    ["V01 a React.memo-wrapped arrow component with a form-text error prop", 'import React from "react"; export const FieldNote = React.memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+    // V02: forwardRef around an arrow, with no react import.
+    ["V02 forwardRef arrow component, form-text error prop", 'export const Field = forwardRef(({ error }, ref) => <label ref={ref}>{error}</label>);', "src/components/field.tsx"],
+    // V03: React.forwardRef around a named function expression.
+    ["V03 a React.forwardRef named function expression", 'import React from "react"; export const Field = React.forwardRef(function Field({ error }, ref) { return <label ref={ref}>{error}</label>; });', "src/components/field.tsx"],
+    // V04: a component passed by name to an unimported memo.
+    ["V04 component passed by name to memo", 'function FieldNote({ error }) { return <em>{error}</em>; }\nexport default memo(FieldNote);', "src/components/field-note.tsx"],
+    // V05: an arrow component exported default by name.
+    ["V05 arrow component assigned, then exported default", 'const Status = ({ error }) => <p role="alert">{error}</p>;\nexport default Status;', "src/components/status.tsx"],
+    // V18: a PascalCase component rendered as a JSX tag, never called.
+    ["V18 PascalCase component rendered as JSX and never called", 'function Hint({ error }) { return <small>{error}</small>; }\nexport function Form({ error }) { return <div><Hint error={error} /></div>; }', "src/components/form.tsx"],
+    // G25: a PascalCase arrow returning JSX.
+    ["G25 PascalCase component with a form-text error prop", 'export const FieldNote = ({ error }) => (error ? <em>{error}</em> : null);', "src/components/field-note.tsx"],
+    // N05: a typed string prop rendered as a hint.
+    ["N05 a form hint with a string error prop", 'export function TextHint({ error, label }: { error?: string; label: string }) {\n  return <span>{error ?? label}</span>;\n}', "src/components/text-hint.tsx"],
+    // A lower-case arrow whose only claim to be a component was its JSX return.
+    ["a lower-case arrow component returning JSX", 'const fieldHint = ({ error }) => <small>{error}</small>;', "src/components/field-hint.tsx"],
+    // react's memo around an arrow.
+    ["a memo-wrapped component with a form-text error prop", 'import { memo } from "react"; export const FieldNote = memo(({ error }) => <em>{error}</em>);', "src/components/field-note.tsx"],
+  ])("flags %s, by design", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
   // The allowlist names a module path and an export. The same name imported
