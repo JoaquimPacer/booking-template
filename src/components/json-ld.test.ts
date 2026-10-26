@@ -27,6 +27,7 @@ describe("JsonLd", () => {
     commentEnd: "-->",
     lineSeparator: String.fromCharCode(0x2028),
     paragraphSeparator: String.fromCharCode(0x2029),
+    ampersand: "Brakes & rotors",
   };
 
   it("emits exactly one structured-data script element", () => {
@@ -42,6 +43,9 @@ describe("JsonLd", () => {
     ["comment-close", "-->"],
     ["line-separator", String.fromCharCode(0x2028)],
     ["paragraph-separator", String.fromCharCode(0x2029)],
+    // Inert inside a script element today; kept escaped so the payload stays
+    // safe if it is ever moved into an attribute or other HTML context.
+    ["ampersand", "&"],
   ])("escapes %s in the rendered fixture", (_label, sequence) => {
     // Both fixture coverage and escaping are required, independently per sequence.
     const covered = Object.values(hostile).some((value) => value.toLowerCase().includes(sequence));

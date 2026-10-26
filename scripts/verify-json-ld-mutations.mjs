@@ -3,7 +3,7 @@
 // vitest config aliases the component's "../lib/json-ld" import to it, so the
 // real source is never written, even if the run is killed. Never reads
 // environment files or contacts a service.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -22,8 +22,23 @@ const mutations = [
   ["comment-close", "--\\u003e", "-->"],
   ["line-separator", "\\u2028", String.fromCharCode(0x2028)],
   ["paragraph-separator", "\\u2029", String.fromCharCode(0x2029)],
+  ["ampersand", "\\u0026", "&"],
 ];
 const expectGaps = process.argv.includes("--expect-gaps");
+
+// A hard kill (SIGKILL, a closed terminal) skips cleanUp and strands a temp
+// directory. Remove only this runner's json-ld-mutants-* directories, and only
+// those untouched for ten minutes, so a run still in progress keeps its own.
+const STALE_MS = 10 * 60_000;
+for (const entry of readdirSync(tmpdir(), { withFileTypes: true })) {
+  if (!entry.isDirectory() || !entry.name.startsWith("json-ld-mutants-")) continue;
+  const stale = join(tmpdir(), entry.name);
+  try {
+    if (Date.now() - statSync(stale).mtimeMs > STALE_MS) rmSync(stale, { recursive: true, force: true, maxRetries: 10 });
+  } catch {
+    // Another run removed it first, or it is still locked; the next run retries.
+  }
+}
 
 const workDir = mkdtempSync(join(tmpdir(), "json-ld-mutants-"));
 const mutantPath = join(workDir, "json-ld.ts");
@@ -38,12 +53,11 @@ writeFileSync(configPath, [
 ].join("\n"));
 
 let child;
-// Belt: nothing here writes src/. If an interrupt lands mid-run anyway, stop
-// the test process, put the serializer's bytes back if they differ, and
-// remove the temporary directory before exiting.
+// Nothing here writes src/. On an interrupt, stop the test process and remove
+// the temporary directory before exiting. The serializer is never written
+// back: a change during the run can only be someone else's save.
 function cleanUp() {
   child?.kill();
-  if (!readFileSync(sourcePath).equals(original)) writeFileSync(sourcePath, original);
   rmSync(workDir, { recursive: true, force: true, maxRetries: 10 });
 }
 for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) {
@@ -93,7 +107,7 @@ try {
 } finally {
   const untouched = readFileSync(sourcePath).equals(original);
   cleanUp();
-  if (!untouched) throw new Error("src/lib/json-ld.ts changed during the run; original bytes restored.");
+  if (!untouched) throw new Error("src/lib/json-ld.ts changed during the run; the runner left it untouched.");
 }
 
 console.log(`Source untouched; mutation expectations ${valid ? "passed" : "failed"}.`);
