@@ -6,7 +6,7 @@
 // error again. Wrap it: console.error("...", safeError(err)).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, posix, relative, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 
@@ -95,10 +95,14 @@ function rawErrorLogs(): string[] {
 // a literal counts as one), window.onerror and window.onunhandledrejection,
 // process.setUncaughtExceptionCaptureCallback, a class componentDidCatch, an
 // allSettled reason and a provider's error result, whether destructured
-// (declaration, for-of, parameter, assignment, rest element) or read as
-// result.error or result["error"] (declared or assigned, cast or not, or in a
-// .then success handler). In error.tsx and global-error.tsx the error prop,
-// destructured or read as props.error, is the caught value too.
+// (declaration, for-of, assignment, rest element, or the parameter of any
+// function but a component) or read as result.error or result["error"]
+// (declared or assigned, cast or not, or in a .then success handler, inline or
+// passed by name). A component, a function with a PascalCase name or a JSX
+// return, gets its error prop from its parent, usually form text as in
+// FieldError({ error }). Only in error.tsx and global-error.tsx, where Next.js
+// passes the caught value, is that prop audited, destructured or read as
+// props.error.
 // Each is checked the same way. A destructured catch or handler parameter
 // always fails, because its pieces (message, cause, config) are the provider
 // text safeError exists to drop.
@@ -108,29 +112,48 @@ const HOOKS = new Set(["useEffect", "useLayoutEffect", "useCallback", "useMemo"]
 // Handler properties and the parameters that receive the caught value:
 // onerror's message and error, onunhandledrejection's event.
 const ERROR_PROPERTIES = new Map([["onerror", [0, 4]], ["onunhandledrejection", [0]]]);
-// The only calls whose result.error is not audited. Each is our own server
+// The only calls whose result.error is not audited, each named by its module's
+// path from the repository root and its export name. Each is our own server
 // action and returns fixed wording or a zod validation message, never a
 // provider result. A helper that returns a provider result whole
 // (return resend.emails.send(message)) must never be added here.
-const SAFE_RESULTS = new Set(["createPendingBooking"]);
+const SAFE_RESULTS = [{ module: "src/app/book/[slug]/actions.ts", name: "createPendingBooking" }];
+const EXTENSION = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 // Next.js hands the caught value to these files' components as the error prop.
 // Anywhere else an error prop is usually form text, as in FieldError({ error }).
 const BOUNDARY_FILE = /(^|[\\/])(global-)?error\.[jt]sx?$/;
+// A component's name: ErrorPage, FieldError. An all-caps route handler (POST) is not one.
+const COMPONENT_NAME = /^[A-Z](?=[A-Za-z0-9]*[a-z])[A-Za-z0-9]*$/;
 
 function unsafeCaughtReferences(text: string, file = ""): number[] {
   const source = ts.createSourceFile("audit.tsx", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const hits: number[] = [];
   const settles = text.includes("allSettled");
   const boundary = BOUNDARY_FILE.test(file);
-  const hit = (node: ts.Node) => hits.push(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
-  // Allowlisted functions imported by name from our own modules (relative or @/).
+  // Two rules can reach the same node (an inline .then handler's { error } is
+  // also a parameter pattern); it counts once.
+  const reached = new Set<number>();
+  const hit = (node: ts.Node) => {
+    const start = node.getStart(source);
+    if (reached.has(start)) return;
+    reached.add(start);
+    hits.push(source.getLineAndCharacterOfPosition(start).line + 1);
+  };
+  // Allowlisted exports, imported by name (aliased or not) from the module the
+  // allowlist names, written relative or with @/. The same name from any other
+  // module is audited.
+  const from = relative(ROOT, resolve(ROOT, file)).split(sep).join("/");
   const safeResults = new Set<string>();
   for (const statement of source.statements) {
-    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
-      !/^(\.|@\/)/.test(statement.moduleSpecifier.text)) continue;
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const specifier = statement.moduleSpecifier.text;
+    const target = specifier.startsWith("@/") ? posix.join("src", specifier.slice(2))
+      : specifier.startsWith(".") ? posix.join(posix.dirname(from), specifier) : "";
     const bindings = statement.importClause?.namedBindings;
-    if (bindings && ts.isNamedImports(bindings)) for (const element of bindings.elements) {
-      if (SAFE_RESULTS.has((element.propertyName ?? element.name).text)) safeResults.add(element.name.text);
+    if (target && bindings && ts.isNamedImports(bindings)) for (const element of bindings.elements) {
+      const name = (element.propertyName ?? element.name).text;
+      if (SAFE_RESULTS.some((entry) => entry.name === name &&
+        entry.module.replace(EXTENSION, "") === target.replace(EXTENSION, ""))) safeResults.add(element.name.text);
     }
   }
 
@@ -235,9 +258,9 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     }
   }
 
-  // A handler passed by name is audited where it is declared. One defined in
-  // another module cannot be audited here, so it fails.
-  function inspectNamedHandler(reference: ts.Identifier, indices = [0]) {
+  // The functions this file declares under a name: a function declaration, or
+  // an arrow or function expression assigned to it.
+  function declarationsOf(reference: ts.Identifier): ts.FunctionLikeDeclaration[] {
     const declarations: ts.FunctionLikeDeclaration[] = [];
     function collect(node: ts.Node) {
       if (ts.isFunctionDeclaration(node) && node.name?.text === reference.text) declarations.push(node);
@@ -248,6 +271,13 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       ts.forEachChild(node, collect);
     }
     collect(source);
+    return declarations;
+  }
+
+  // A handler passed by name is audited where it is declared. One defined in
+  // another module cannot be audited here, so it fails.
+  function inspectNamedHandler(reference: ts.Identifier, indices = [0]) {
+    const declarations = declarationsOf(reference);
     if (declarations.length === 0) hit(reference);
     for (const declaration of declarations) inspectHandler(declaration, indices);
   }
@@ -308,6 +338,21 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     else if (binding && ts.isObjectBindingPattern(binding)) inspectPattern(binding, scope);
   }
 
+  // A component: a PascalCase name (its own, or the const it is assigned to)
+  // or a return value with JSX in it.
+  function componentShaped(fn: ts.FunctionLikeDeclaration): boolean {
+    const name = (ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name ? fn.name.text
+      : ts.isVariableDeclaration(fn.parent) && ts.isIdentifier(fn.parent.name) ? fn.parent.name.text : "";
+    if (COMPONENT_NAME.test(name)) return true;
+    const jsx = (node: ts.Node): boolean =>
+      ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node) || !!ts.forEachChild(node, jsx);
+    // Returns inside a nested function are that function's, not this one's.
+    const returnsJsx = (node: ts.Node): boolean => (ts.isReturnStatement(node) && !!node.expression && jsx(node.expression)) ||
+      (!ts.isFunctionLike(node) && !!ts.forEachChild(node, returnsJsx));
+    if (!fn.body) return false;
+    return ts.isBlock(fn.body) ? returnsJsx(fn.body) : jsx(fn.body);
+  }
+
   function find(node: ts.Node) {
     if (ts.isCatchClause(node) && node.variableDeclaration) {
       const binding = node.variableDeclaration.name;
@@ -316,12 +361,16 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     }
     if (ts.isCallExpression(node)) {
       inspectAnyHandler(rejectionHandler(node));
-      // A .then success handler receives the provider result itself.
+      // A .then success handler receives the provider result itself. One passed
+      // by name is audited where this file declares it, as a rejection handler
+      // is. One the file does not declare (an import, a state setter) is not:
+      // most success handlers never see a provider result.
       const callee = node.expression;
       const success = memberName(callee) === "then" ? node.arguments[0] : undefined;
-      if (success && (ts.isArrowFunction(success) || ts.isFunctionExpression(success)) &&
-        (ts.isPropertyAccessExpression(callee) || ts.isElementAccessExpression(callee)) && !allowlisted(callee.expression)) {
-        inspectResult(success.parameters[0]?.name, success.body);
+      const handlers = !success ? [] : ts.isArrowFunction(success) || ts.isFunctionExpression(success) ? [success]
+        : ts.isIdentifier(success) ? declarationsOf(success) : [];
+      if ((ts.isPropertyAccessExpression(callee) || ts.isElementAccessExpression(callee)) && !allowlisted(callee.expression)) {
+        for (const handler of handlers) if (handler.body) inspectResult(handler.parameters[0]?.name, handler.body);
       }
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
@@ -335,10 +384,14 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name)) {
       inspectPattern(node.name, enclosingBlock(node));
     }
-    // A parameter pattern counts for an allSettled reason anywhere, and for
-    // error only in an error boundary file, where props.error counts as well.
+    // A parameter pattern pulls error out of whatever the caller passes, a
+    // provider result included (a forEach over sends, a helper, a .then
+    // handler), so it counts in every function but a component outside a
+    // boundary file. An allSettled reason counts everywhere, and in a boundary
+    // file so does props.error.
     if (ts.isParameter(node) && "body" in node.parent && node.parent.body) {
-      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body, boundary);
+      const audited = boundary || !componentShaped(node.parent as ts.FunctionLikeDeclaration);
+      if (ts.isObjectBindingPattern(node.name)) inspectPattern(node.name, node.parent.body, audited);
       else if (boundary && ts.isIdentifier(node.name)) inspectErrorReads(node.parent.body, node.name.text);
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
@@ -452,7 +505,7 @@ describe("error logging", () => {
   });
 
   // A form field's error prop is the form's own text, not a caught value.
-  it("audits an error prop only in error.tsx and global-error.tsx", () => {
+  it("audits a component's error prop only in error.tsx and global-error.tsx", () => {
     const field = 'export function FieldError({ error }) { return error ? <p role="alert">{error}</p> : null; }';
     expect(unsafeCaughtReferences(field, "src/components/field-error.tsx")).toEqual([]);
     expect(unsafeCaughtReferences(field, "src/app/global-error.tsx").length).toBeGreaterThan(0);
@@ -474,7 +527,7 @@ describe("error logging", () => {
   // An own helper can return a provider result whole, so only the listed
   // server action is exempt.
   it("audits result.error from every call but the allowlisted createPendingBooking", () => {
-    expect(unsafeCaughtReferences('import { createPendingBooking } from "./actions"; const result = await createPendingBooking(input); if (!result.ok) setSubmitError(result.error);')).toEqual([]);
+    expect(unsafeCaughtReferences('import { createPendingBooking } from "./actions"; const result = await createPendingBooking(input); if (!result.ok) setSubmitError(result.error);', "src/app/book/[slug]/booking-flow.tsx")).toEqual([]);
     expect(unsafeCaughtReferences('import { send } from "resend"; const result = await send(message); setSubmitError(result.error);')).toEqual([1]);
     expect(unsafeCaughtReferences('import { sendMail } from "@/lib/mail"; const result = await sendMail(message); console.error("send failed", result.error);')).toEqual([1]);
   });
@@ -495,5 +548,61 @@ describe("error logging", () => {
 
   it("allows local classification without forwarding provider text", () => {
     expect(unsafeCaughtReferences('try {} catch (caught) { if (caught instanceof Error && caught.message === "SLOT_TAKEN") return false; logger.warn(safeError(caught)); }')).toEqual([]);
+  });
+
+  // Raw shapes from the fourth version's review, audited in an ordinary
+  // component file. The fourth version let X16, X22, X23 and X25 through: each
+  // reaches the value through a parameter pattern or a .then success handler
+  // passed by name, outside any component.
+  it.each([
+    ["X01 optional chaining on a declared result", 'const result = await resend.emails.send(message);\nlogger.error("send failed", result?.error);'],
+    ["X05 a caught error nested under another key", 'try { await sync(); } catch (failure) { log.error({ event: "sync", detail: { cause: failure } }); }'],
+    ["X06 a provider error inside a template literal", 'const outcome = await mailer.send(message);\nreport(`send failed: ${outcome.error}`);'],
+    ["X07 a logger wrapper with another name", 'try { await sync(); } catch (failure) { audit.record("sync", failure); }'],
+    ["X08 a provider error message into a toast", 'const outcome = await saveSettings(form);\nif (outcome.error) toast.error(outcome.error.message);'],
+    ["X09 a caught error into a Response body", 'export async function POST() {\n  try { await sync(); } catch (failure) { return new Response(String(failure), { status: 500 }); }\n}'],
+    ["X10 a provider error shorthand into Response.json", 'const { data, error } = await supabase.from("bookings").select();\nreturn Response.json({ data, error }, { status: error ? 500 : 200 });'],
+    ["X16 a .then success handler passed by name", 'function onSent({ error }) { if (error) logger.error("send failed", error); }\nresend.emails.send(message).then(onSent);'],
+    ["X19 a rejection handler imported from another module", 'import { report } from "./report";\ntask.catch(report);'],
+    ["X20 a caught error wrapped into a new Error message", 'try { await sync(); } catch (failure) { throw new Error(`sync failed: ${failure}`); }'],
+    ["X21 the json body of an awaited fetch", 'export async function load() {\n  const body = await (await fetch(url)).json();\n  if (body.error) logger.error("upstream failed", body.error);\n}'],
+    ["X22 forEach over Promise.all results with an { error } parameter", 'export async function notifyAll(messages) {\n  const replies = await Promise.all(messages.map((m) => resend.emails.send(m)));\n  replies.forEach(({ error }) => { if (error) logger.error("send failed", error); });\n}'],
+    ["X23 a named helper destructuring a provider result", 'function logReply({ error }) { if (error) logger.error("send failed", error); }\nexport async function notify(m) { logReply(await resend.emails.send(m)); }'],
+    ["X24 an inline .then function expression destructuring { error }", 'resend.emails.send(message).then(function ({ error }) { if (error) logger.error("send failed", error); });'],
+    ["X25 a .then success handler passed by name, reading result.error", 'function onSent(reply) { if (reply.error) logger.error("send failed", reply.error); }\nresend.emails.send(message).then(onSent);'],
+  ])("detects %s", (_shape, code) => {
+    expect(unsafeCaughtReferences(code, "src/components/send-status.tsx").length).toBeGreaterThan(0);
+  });
+
+  // Benign shapes from the same review. N05 and the arrow are components, by
+  // name or by their JSX return, so their error prop is their own text.
+  it.each([
+    ["N01 an error message compared to a literal", 'const result = await resend.emails.send(message);\nif (result.error?.message === "rate_limited") return retryLater();', "src/components/send-status.tsx"],
+    ["N02 data only from a provider result", 'const { data } = await resend.emails.send(message);\nlogger.info("sent", data?.id);', "src/components/send-status.tsx"],
+    ["N03 the allowlisted action under an alias", 'import { createPendingBooking as book } from "./actions";\nconst outcome = await book(input);\nif (!outcome.ok) setSubmitError(outcome.error);', "src/app/book/[slug]/booking-flow.tsx"],
+    ["N04 safeError in a catch, fixed text returned", 'try { await sync(); } catch (failure) {\n  console.error("sync failed:", safeError(failure));\n  return { ok: false, error: "Sync failed." };\n}', "src/components/send-status.tsx"],
+    ["N05 a form hint with a string error prop", 'export function TextHint({ error, label }: { error?: string; label: string }) {\n  return <span>{error ?? label}</span>;\n}', "src/components/text-hint.tsx"],
+    ["N06 a reason field outside allSettled", 'const { reason } = await cancelBooking(id);\nlogger.info("cancelled", reason);', "src/components/send-status.tsx"],
+    ["N07 a .then success handler reading data only", 'resend.emails.send(message).then(({ data }) => logger.info("sent", data?.id));', "src/components/send-status.tsx"],
+    ["N08 onerror cleared with null", 'image.onerror = null;\nwindow.onunhandledrejection = null;', "src/components/send-status.tsx"],
+    ["N09 a local validation string named error", 'const error = validate(form);\nif (error) setFieldError(error);', "src/components/send-status.tsx"],
+    ["a lower-case arrow component returning JSX", 'const fieldHint = ({ error }) => <small>{error}</small>;', "src/components/field-hint.tsx"],
+  ])("allows %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file)).toEqual([]);
+  });
+
+  // The allowlist names a module path and an export. The same name imported
+  // from anywhere else is audited like any other call.
+  it.each([
+    ["the action from ./actions", 'import { createPendingBooking } from "./actions";\nconst result = await createPendingBooking(input);\nif (!result.ok) setSubmitError(result.error);', "src/app/book/[slug]/booking-flow.tsx", 0],
+    ["the action through the @/ path, aliased", 'import { createPendingBooking as book } from "@/app/book/[slug]/actions";\nconst result = await book(input);\nif (!result.ok) setSubmitError(result.error);', "src/components/send-status.tsx", 0],
+    ["another action from a sibling module", 'import { sendNotice } from "@/app/book/[slug]/notify";\nconst result = await sendNotice(input);\nif (result.error) setSubmitError(result.error.message);', "src/app/book/[slug]/booking-flow.tsx", 1],
+    ["the same name from @/lib/mail", 'import { createPendingBooking } from "@/lib/mail";\nconst result = await createPendingBooking(message);\nlogger.error("send failed", result.error);', "src/components/send-status.tsx", 1],
+    ["the same name from ../../lib/mail", 'import { createPendingBooking } from "../../lib/mail";\nconst result = await createPendingBooking(message);\ntoast.error(result.error.message);', "src/components/send-status.tsx", 1],
+    ["the same name from another folder's ./actions", 'import { createPendingBooking } from "./actions";\nconst result = await createPendingBooking(input);\nsetSubmitError(result.error);', "src/app/admin/form.tsx", 1],
+    ["the same name from a package", 'import { createPendingBooking } from "booking-sdk";\nconst result = await createPendingBooking(message);\nlogger.error("send failed", result.error);', "src/components/send-status.tsx", 1],
+    ["a local function with the same name", 'async function createPendingBooking(m) { return resend.emails.send(m); }\nconst result = await createPendingBooking(message);\nlogger.error("send failed", result.error);', "src/components/send-status.tsx", 1],
+  ])("allowlist: %s", (_shape, code, file, expected) => {
+    expect(unsafeCaughtReferences(code, file).length).toBe(expected);
   });
 });

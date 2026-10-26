@@ -3,7 +3,7 @@
 // vitest config aliases the component's "../lib/json-ld" import to it, so the
 // real source is never written, even if the run is killed. Never reads
 // environment files or contacts a service.
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -106,9 +106,11 @@ try {
   }
 } finally {
   // Clean up before reading the source, so a source deleted mid-run cannot
-  // strand the temporary directory.
+  // strand the temporary directory. Anything but a file at the source path
+  // (nothing, a directory) counts as changed.
   cleanUp();
-  const untouched = existsSync(sourcePath) && readFileSync(sourcePath).equals(original);
+  const untouched = statSync(sourcePath, { throwIfNoEntry: false })?.isFile() === true &&
+    readFileSync(sourcePath).equals(original);
   if (!untouched) throw new Error("src/lib/json-ld.ts changed during the run; the runner left it untouched.");
 }
 
