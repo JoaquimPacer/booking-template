@@ -109,8 +109,9 @@ export default async function RootLayout({
   const headingFontStack = fontVar(siteSettings?.brand?.headingFont, "system-ui, sans-serif");
   const bodyFontStack = fontVar(siteSettings?.brand?.bodyFont, "system-ui, sans-serif");
   // Design preset from Sanity; every preset's CSS is keyed off this attribute
-  // in globals.css. Missing field (older datasets) = classic, the original look.
-  const stylePreset = siteSettings?.brand?.stylePreset ?? "classic";
+  // in globals.css. Missing field = B - Editorial, the house default
+  // (datasets with an explicit choice are unaffected).
+  const stylePreset = siteSettings?.brand?.stylePreset ?? "warm-editorial";
   // Demo switcher shows on preview deployments + local dev, never production.
   const showStyleSwitcher = process.env.VERCEL_ENV !== "production";
 

@@ -110,9 +110,10 @@ process.exit(1);
 
 /*
  * KNOWN, OUT OF SCOPE, tracked rather than silently ignored:
- *   scripts/ still contains client-specific one-offs (seed-theresa-services.ts,
- *   set-oncology-cancellation.ts, set-tmj-content.ts, check-jane-links.ts and
- *   others). They never render to a visitor, but they do not belong in a
- *   template either. Deleting them is a judgement call about what history is
- *   worth keeping, so it is carded rather than done here.
+ *   scripts/ is not scanned. The six pure client one-offs (seed-theresa-services,
+ *   set-oncology-cancellation, set-tmj-content, check-jane-links,
+ *   set-booking-links, restore-sanity-services) were deleted on 2026-10-19; byte-
+ *   identical copies live in the theresa-attea-lmt fork. Generic seed scripts
+ *   (seed-faqs, seed-pages, set-homepage-content and others) still carry sample
+ *   copy from that client and are the next candidates for neutral sample data.
  */
