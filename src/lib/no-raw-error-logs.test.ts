@@ -197,20 +197,11 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     return undefined;
   }
 
-  // Boolean(x) tests presence only while Boolean is the global one, so a file
-  // that names Boolean anywhere but as the callee of a plain Boolean(...) call
-  // loses the allowance. That covers one that declares, imports or takes its
-  // own (const Boolean = (x) => x) and one that replaces the global
-  // (globalThis.Boolean = (x) => x, or "Boolean" as a key). Open: a module
-  // that replaces it for another file is not seen here.
-  const namesBoolean = (node: ts.Node): boolean =>
-    ((ts.isIdentifier(node) || ts.isStringLiteralLike(node)) && node.text === "Boolean" &&
-      !(ts.isCallExpression(node.parent) && node.parent.expression === node)) || !!ts.forEachChild(node, namesBoolean);
-  const globalBoolean = !namesBoolean(source);
-
   // A caught value may be wrapped by safeError, type-checked, compared to a
-  // known message, or tested for presence (if, !, the global Boolean()).
-  // Anything else forwards it.
+  // known message, or tested for presence (if, !). Anything else forwards it.
+  // Boolean(x) is not a presence test: the global Boolean can be replaced
+  // where this file cannot see it (another module, a computed key, eval), so
+  // write !!x.
   function forwarded(value: ts.Expression): boolean {
     const parent = value.parent;
     const safe = ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) &&
@@ -224,9 +215,7 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
       comparison.left === parent && ts.isStringLiteral(comparison.right) &&
       [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(comparison.operatorToken.kind);
     const presence = (ts.isIfStatement(parent) && parent.expression === value) ||
-      (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken) ||
-      (ts.isCallExpression(parent) && ts.isIdentifier(parent.expression) && parent.expression.text === "Boolean" && globalBoolean &&
-        parent.arguments.length === 1 && parent.arguments[0] === value);
+      (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken);
     // A hook's dependency list only tells React when to rerun; it forwards nothing.
     const dependency = ts.isArrayLiteralExpression(parent) && ts.isCallExpression(parent.parent) &&
       parent.parent.arguments[1] === parent && ts.isIdentifier(parent.parent.expression) &&
@@ -310,9 +299,11 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
     for (const declaration of declarations) inspectHandler(declaration, indices);
   }
 
-  // Audit a handler however it is given. null or undefined installs none.
+  // Audit a handler however it is given. null installs none. undefined is a
+  // name like any other: a file may declare its own, so it is audited where
+  // declared and fails where it is not.
   function inspectAnyHandler(handler: ts.Expression | undefined, indices = [0]) {
-    if (!handler || handler.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(handler) && handler.text === "undefined")) return;
+    if (!handler || handler.kind === ts.SyntaxKind.NullKeyword) return;
     if (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) inspectHandler(handler, indices);
     else if (ts.isIdentifier(handler)) inspectNamedHandler(handler, indices);
     else hit(handler);
@@ -349,8 +340,12 @@ function unsafeCaughtReferences(text: string, file = ""): number[] {
   function inspectPattern(pattern: ts.ObjectBindingPattern, scope: ts.Node) {
     for (const element of pattern.elements) {
       // A rest element keeps error along with every other unnamed property.
+      // Named error (or, beside allSettled, reason), it is also logged whole.
       if (element.dotDotDotToken) {
-        if (ts.isIdentifier(element.name)) inspectErrorReads(scope, element.name.text);
+        if (ts.isIdentifier(element.name)) {
+          inspectErrorReads(scope, element.name.text);
+          if (exposes(element.name)) inspect(scope, element.name.text);
+        }
         continue;
       }
       if (!exposes(element.propertyName ?? element.name)) {
@@ -652,10 +647,12 @@ describe("error logging", () => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
 
-  // A benign shape from the same review: Boolean(fault) keeps only a flag, as
-  // !!fault does. V01 and V03 now flag, by design, further down.
+  // A benign shape from the same review: !!fault keeps only a flag. The review
+  // wrote it Boolean(fault), which now flags: the global Boolean can be
+  // replaced where this file cannot see it (N11 below), so it is not trusted.
+  // V01 and V03 now flag, by design, further down.
   it.each([
-    ["V10c a getDerivedStateFromError flag set through Boolean(fault)", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: Boolean(fault) }; } }', "src/components/send-status.tsx"],
+    ["V10c a getDerivedStateFromError flag set through !!fault", 'class Boundary extends Component { static getDerivedStateFromError(fault) { return { failed: !!fault }; } }', "src/components/send-status.tsx"],
   ])("allows %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file)).toEqual([]);
   });
@@ -665,7 +662,8 @@ describe("error logging", () => {
   // object property, an alias, a JSX render prop, an array, a cast, a non-null
   // assertion, a comma expression, new, a default parameter, a factory's
   // return, or a memo that is not React's. Z15d: a file's own Boolean may
-  // return its argument, so only the global Boolean() is a presence test.
+  // return its argument; no Boolean() call is a presence test, the global's
+  // included.
   it.each([
     ["Z05 helper assigned to an object property, then handlers.log(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst handlers = { log: LogReply };\nexport async function notify(m) { handlers.log(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
     ["Z05b helper in a shorthand property, then handlers.LogReply(reply)", 'function LogReply({ error }) { if (error) logger.error("send failed", error); }\nconst handlers = { LogReply };\nexport async function notify(m) { handlers.LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
@@ -718,6 +716,27 @@ describe("error logging", () => {
     ["G03 lowercase component returning JSX logs error.message", 'export function sendStatus({ error }) {\n  useEffect(() => { if (error) logger.error("send failed", error.message); }, [error]);\n  return <p>Send failed</p>;\n}', "src/components/send-status.tsx"],
     ["V06 PascalCase helper exported for another file's call, in its own file", 'export function LogReply({ error }) { if (error) logger.error("send failed", error); }', "src/lib/log-reply.ts"],
     ["V06b lowercase JSX render helper exported for another file's call, in its own file", 'export function renderReply({ error }) { if (error) logger.error("send failed", error); return <p>Failed</p>; }', "src/components/render-reply.tsx"],
+  ])("detects %s", (_shape, code, file) => {
+    expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
+  });
+
+  // Raw shapes from the ninth version's review, each let through by an older
+  // allowance: a rest element named error, logged whole (N13); a local binding
+  // named undefined, passed as a handler (N12); and Boolean() trusted as the
+  // global while the global is replaced where this file cannot see it, through
+  // a computed key, defineProperty, another module, Object.assign or eval (N11).
+  it.each([
+    ["N13 a declaration rest named error, logged whole", 'export async function notify(m) { const { data, ...error } = await resend.emails.send(m); logger.error("send failed", error); }', "src/components/send-status.tsx"],
+    ["N13b a parameter rest named error, logged whole", 'function LogReply({ data, ...error }) { logger.error("send failed", error); }\nexport async function notify(m) { LogReply(await resend.emails.send(m)); }', "src/components/send-status.tsx"],
+    ["N13c a for-of rest named error, logged whole", 'export async function notifyAll(ms) { const replies = await Promise.all(ms.map((m) => resend.emails.send(m))); for (const { data, ...error } of replies) logger.error("send failed", error); }', "src/components/send-status.tsx"],
+    ["N12 a const named undefined passed to .catch", 'const undefined = (caught) => logger.error("failed", caught);\ntask.catch(undefined);', "src/components/send-status.tsx"],
+    ["N12b a function named undefined as a .then rejection handler", 'function undefined(caught) { logger.error("failed", caught); }\ntask.then(done, undefined);', "src/components/send-status.tsx"],
+    ["N12c a local undefined as an unhandledRejection listener", 'const undefined = (reason) => logger.error("failed", reason);\nprocess.on("unhandledRejection", undefined);', "src/components/send-status.tsx"],
+    ["N11 Boolean replaced through a computed globalThis key", 'globalThis["Bool" + "ean"] = (x) => x;\nexport async function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "src/components/send-status.tsx"],
+    ["N11b Boolean replaced through Object.defineProperty", 'Object.defineProperty(globalThis, "Bool".concat("ean"), { value: (x) => x });\nexport async function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "src/components/send-status.tsx"],
+    ["N11c Boolean replaced in another module this file imports", 'import "@/lib/shim";\nexport async function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "src/components/send-status.tsx"],
+    ["N11e Boolean replaced by Object.assign of an imported namespace", 'import * as shim from "./shim";\nObject.assign(globalThis, shim);\nexport async function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "src/components/send-status.tsx"],
+    ["N11f Boolean replaced through eval in a script", 'eval("globalThis.Bool" + "ean = (x) => x");\nasync function notify(m) { const { error } = await resend.emails.send(m); logger.error("send failed", Boolean(error)); }', "scripts/notify.cjs"],
   ])("detects %s", (_shape, code, file) => {
     expect(unsafeCaughtReferences(code, file).length).toBeGreaterThan(0);
   });
